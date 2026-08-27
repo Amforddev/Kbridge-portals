@@ -49,14 +49,20 @@ export const P = {
 };
 export function ic(n, cls){ return '<svg class="icon '+(cls||'')+'" viewBox="0 0 24 24" aria-hidden="true"><path d="'+P[n]+'"/></svg>'; }
 
-export const WORD_SCALE = { theoriq:1, pursuit:1.22 };
+export const WORD_SCALE = { theoriq:1, pursuit:1.15 };
 export function orgWord(k, h){
   const hh = Math.round((h||24) * (WORD_SCALE[k]||1));
-  return '<img class="brand-word" src="'+LOGO[k].word+'" alt="'+ORGS[k].name+'" style="height:'+hh+'px">';
+  if (LOGO[k] && LOGO[k].word) {
+    return '<img class="brand-word" src="'+LOGO[k].word+'" alt="'+(ORGS[k]?ORGS[k].name:k)+'" referrerpolicy="no-referrer" style="height:'+hh+'px;max-height:100%;max-width:180px;object-fit:contain;display:block">';
+  }
+  return '<span style="font-size:'+hh+'px;font-weight:600">'+(ORGS[k]? ORGS[k].name : k)+'</span>';
 }
 export function orgMark(k, s){
   s = s || 36;
-  return '<span class="brand-mark" style="width:'+s+'px;height:'+s+'px"><img src="'+LOGO[k].icon+'" alt=""></span>';
+  if (LOGO[k] && LOGO[k].icon) {
+    return '<span class="brand-mark" style="width:'+s+'px;height:'+s+'px;border-radius:'+Math.round(s/3.4)+'px;overflow:hidden;flex:none;display:inline-flex;align-items:center;justify-content:center;background:#fff;padding:2px"><img src="'+LOGO[k].icon+'" alt="'+(ORGS[k]?ORGS[k].name:k)+'" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:contain;display:block"></span>';
+  }
+  return '';
 }
 export function kLogo(){ return '<div class="klogo">K</div>'; }
 
@@ -612,9 +618,11 @@ export function viewDashCapital(){
 /* ---------- 5. platforms list ---------- */
 export function platformMark(p, size){
   const s = size||36;
-  const box = `width:${s}px;height:${s}px;border-radius:${Math.round(s/3.4)}px;flex:none;display:flex;align-items:center;justify-content:center;`;
-  if (LOGO[p.key]) return `<span class="brand-mark" style="${box}background:#fff;border:1px solid var(--line)">
-    <img src="${LOGO[p.key].icon}" alt="" style="width:${Math.round(s*0.68)}px;height:${Math.round(s*0.68)}px"></span>`;
+  const box = `width:${s}px;height:${s}px;border-radius:${Math.round(s/3.4)}px;flex:none;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;background:#fff;border:1px solid var(--line-soft);`;
+  if (LOGO[p.key] && LOGO[p.key].icon) {
+    return `<span class="brand-mark" style="${box}">
+      <img src="${LOGO[p.key].icon}" alt="${p.name}" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:contain;display:block;padding:2px"></span>`;
+  }
   return `<span style="${box}font-size:${Math.round(s*0.42)}px;font-weight:600;
     background:${p.status==='Open'?'#141413':'#E4E4E0'};color:${p.status==='Open'?'#fff':'#6B6B66'}">${p.name[0]}</span>`;
 }
@@ -748,18 +756,18 @@ export function viewWallets(){
 
   const fundRows = funds.map(w => `
     <div class="wrow">
-      <div class="row gap12">
+      <div class="row gap12" style="min-width:0;flex:1 1 auto">
         <span class="wic">${ic('wallet','icon-sm')}</span>
-        <div>
-          <div class="row gap8"><span style="font-size:13.5px;font-weight:500">${esc(w.label)}</span>
-            ${w.primary? '<span class="badge b-ink" style="font-size:10px">Default</span>':''}</div>
-          <div class="addr mono">${w.address}</div>
+        <div style="min-width:0;overflow:hidden">
+          <div class="row gap8" style="flex-wrap:nowrap"><span style="font-size:13.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(w.label)}</span>
+            ${w.primary? '<span class="badge b-ink" style="font-size:10px;flex:none">Default</span>':''}</div>
+          <div class="addr mono" title="${w.address}">${short(w.address)}</div>
         </div>
       </div>
-      <div class="row gap16">
-        <div class="t-right"><div class="mono" style="font-size:14px;font-weight:500">${nf(w.usdc,2)}</div>
+      <div class="row gap12" style="flex:none;align-items:center;margin-left:auto">
+        <div class="t-right" style="flex:none"><div class="mono" style="font-size:13.5px;font-weight:500">${nf(w.usdc,2)}</div>
           <div class="faint" style="font-size:11px">USDC · ${w.network}</div></div>
-        <div class="row gap4">
+        <div class="row gap4" style="flex:none">
           ${w.primary ? '' : '<button class="btn btn-ghost btn-sm" data-act="wallet-primary" data-id="'+w.id+'">Make default</button>'}
           <button class="btn btn-quiet btn-sm" data-act="wallet-edit" data-id="${w.id}" title="Edit">${ic('pencil','icon-sm')}</button>
           <button class="btn btn-quiet btn-sm" data-act="wallet-del" data-id="${w.id}" title="Remove">${ic('trash','icon-sm')}</button>
@@ -772,16 +780,18 @@ export function viewWallets(){
       <div class="card-head"><h3>${ic('lock','icon-sm')} Token wallet</h3>
         <span class="badge b-gray">${ic('lock','icon-sm')} Not editable</span></div>
       <div class="wrow locked">
-        <div class="row gap12">
+        <div class="row gap12" style="min-width:0;flex:1 1 auto">
           <span class="wic">${ic('lock','icon-sm')}</span>
-          <div><div style="font-size:13.5px;font-weight:500">${esc(tw.label)}</div>
-            <div class="addr mono">${tw.address}</div></div>
+          <div style="min-width:0;overflow:hidden">
+            <div style="font-size:13.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(tw.label)}</div>
+            <div class="addr mono" title="${tw.address}">${short(tw.address)}</div>
+          </div>
         </div>
       </div>
       <div>${S.platforms.filter(p => p.status==='Open').map(p => `
         <div class="wrow" style="padding-top:11px;padding-bottom:11px">
-          <div class="row gap12">${platformMark(p, 26)}<span style="font-size:13px">${p.name}</span></div>
-          <div class="mono t-right" style="font-size:13px;font-weight:500">${nf(heldOf(p.key)+lockedOf(p.key),2)} ${p.symbol}</div>
+          <div class="row gap12" style="min-width:0;flex:1">${platformMark(p, 26)}<span style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</span></div>
+          <div class="mono t-right" style="font-size:13px;font-weight:500;flex:none">${nf(heldOf(p.key)+lockedOf(p.key),2)} ${p.symbol}</div>
         </div>`).join('')}</div>
       <div style="padding:14px 20px;border-top:1px solid var(--line-soft)">
         <div class="callout c-neutral">${ic('shield','icon-sm')}<div>
