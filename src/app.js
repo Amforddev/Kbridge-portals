@@ -49,22 +49,25 @@ export const P = {
 };
 export function ic(n, cls){ return '<svg class="icon '+(cls||'')+'" viewBox="0 0 24 24" aria-hidden="true"><path d="'+P[n]+'"/></svg>'; }
 
-export const WORD_SCALE = { theoriq:1, pursuit:1.15 };
+export const WORD_SCALE = { theoriq:1.15, pursuit:1.15 };
 export function orgWord(k, h){
-  const hh = Math.round((h||24) * (WORD_SCALE[k]||1));
+  const hh = Math.round((h||32) * (WORD_SCALE[k]||1));
   if (LOGO[k] && LOGO[k].word) {
-    return '<img class="brand-word" src="'+LOGO[k].word+'" alt="'+(ORGS[k]?ORGS[k].name:k)+'" referrerpolicy="no-referrer" style="height:'+hh+'px;max-height:100%;max-width:180px;object-fit:contain;display:block">';
+    return '<img class="brand-word" src="'+LOGO[k].word+'" alt="'+(ORGS[k]?ORGS[k].name:k)+'" referrerpolicy="no-referrer" style="height:'+hh+'px;max-height:100%;max-width:240px;object-fit:contain;display:block">';
   }
   return '<span style="font-size:'+hh+'px;font-weight:600">'+(ORGS[k]? ORGS[k].name : k)+'</span>';
 }
 export function orgMark(k, s){
-  s = s || 36;
+  s = s || 40;
   if (LOGO[k] && LOGO[k].icon) {
-    return '<span class="brand-mark" style="width:'+s+'px;height:'+s+'px;border-radius:'+Math.round(s/3.4)+'px;overflow:hidden;flex:none;display:inline-flex;align-items:center;justify-content:center;background:#fff;padding:2px"><img src="'+LOGO[k].icon+'" alt="'+(ORGS[k]?ORGS[k].name:k)+'" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:contain;display:block"></span>';
+    return '<span class="brand-mark" style="width:'+s+'px;height:'+s+'px;border-radius:'+Math.round(s/3.4)+'px;overflow:hidden;flex:none;display:inline-flex;align-items:center;justify-content:center;background:#fff;padding:3px;border:1px solid var(--line-soft)"><img src="'+LOGO[k].icon+'" alt="'+(ORGS[k]?ORGS[k].name:k)+'" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:contain;display:block"></span>';
   }
   return '';
 }
-export function kLogo(){ return '<div class="klogo">K</div>'; }
+export function kLogo(sz){
+  const s = sz || 32;
+  return '<div class="klogo" style="width:'+s+'px;height:'+s+'px;font-size:'+Math.round(s*0.62)+'px">K</div>';
+}
 
 /* ---------- orgs ---------- */
 export const ORGS = {
@@ -120,6 +123,7 @@ export const S = {
   org: null,
   view: 'dash',
   openPlatform: 'pursuit',
+  toasts: [],
 
   platforms: [
     { key:'pursuit', name:'Pursuit', legal:'Pursuit Receivables SPV I', symbol:'PUR',
@@ -235,17 +239,83 @@ export const pfRequests = k => S.requests.filter(r => r.pf === k);
   ];
 })();
 
-/* ---------- toasts ---------- */
-export function toast(title, sub, icon){
+/* ---------- toast notification helper ---------- */
+export function toast(title, sub, icon, type = 'info', duration = 4200){
   const host = document.getElementById('toasts');
+  const id = 'toast-' + Math.random().toString(36).slice(2, 9);
+  const item = { id, title, sub, icon, type, timestamp: new Date() };
+  
+  if (!S.toasts) S.toasts = [];
+  S.toasts.unshift(item);
+  if (S.toasts.length > 50) S.toasts.pop();
+
+  if (!host) return id;
+
   const el = document.createElement('div');
-  el.className = 'toast';
-  el.innerHTML = '<span style="color:#4ADE80;margin-top:1px">'+ic(icon||'check')+'</span><div><div>'+esc(title)+'</div>'+
-    (sub? '<div class="t-sub">'+esc(sub)+'</div>':'')+'</div>';
+  el.className = `toast toast-${type}`;
+  el.id = id;
+
+  let icColor = '#38BDF8';
+  let defaultIcon = 'info';
+  if (type === 'success') { icColor = '#10B981'; defaultIcon = 'check'; }
+  else if (type === 'error') { icColor = '#EF4444'; defaultIcon = 'alert'; }
+  else if (type === 'warn') { icColor = '#F59E0B'; defaultIcon = 'alert'; }
+
+  const iconName = icon || defaultIcon;
+
+  el.innerHTML = `
+    <span class="t-ic" style="color:${icColor}">
+      ${ic(iconName, 'icon-sm')}
+    </span>
+    <div class="t-content">
+      <div class="t-title">${esc(title)}</div>
+      ${sub ? `<div class="t-sub">${esc(sub)}</div>` : ''}
+    </div>
+    <button class="t-close" data-dismiss="${id}" title="Dismiss" aria-label="Dismiss notification">
+      ${ic('x', 'icon-xs')}
+    </button>
+  `;
+
+  const closeBtn = el.querySelector('.t-close');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toast.dismiss(id);
+    });
+  }
+
   host.appendChild(el);
-  setTimeout(() => { el.style.transition='opacity .3s cubic-bezier(0.16, 1, 0.3, 1),transform .3s cubic-bezier(0.16, 1, 0.3, 1)'; el.style.opacity='0'; el.style.transform='translateY(10px) scale(0.96)';
-    setTimeout(()=>el.remove(), 320); }, 4200);
+
+  if (duration > 0) {
+    setTimeout(() => {
+      toast.dismiss(id);
+    }, duration);
+  }
+
+  return id;
 }
+
+toast.success = (title, sub, icon) => toast(title, sub, icon || 'check', 'success', 4500);
+toast.error = (title, sub, icon) => toast(title, sub, icon || 'alert', 'error', 6000);
+toast.warn = (title, sub, icon) => toast(title, sub, icon || 'alert', 'warn', 5000);
+toast.info = (title, sub, icon) => toast(title, sub, icon || 'info', 'info', 4200);
+toast.dismiss = (id) => {
+  const el = document.getElementById(id);
+  if (el) {
+    el.classList.add('toast-out');
+    setTimeout(() => {
+      if (el.parentNode) el.parentNode.removeChild(el);
+    }, 240);
+  }
+  if (S.toasts) {
+    S.toasts = S.toasts.filter(t => t.id !== id);
+  }
+};
+toast.clear = () => {
+  const host = document.getElementById('toasts');
+  if (host) host.innerHTML = '';
+  S.toasts = [];
+};
 
 /* ---------- NAV chart ---------- */
 export let CHART_PTS = [];
@@ -351,21 +421,21 @@ export function gateScreen(){
   const card = k => {
     const o = ORGS[k];
     return `<button class="gate-card" data-act="pick" data-org="${k}">
-      <div class="between" style="align-items:center;min-height:44px">
-        ${orgWord(k, 28)}
+      <div class="between" style="align-items:center;min-height:56px">
+        ${orgWord(k, 42)}
         <span class="gate-role">${o.tag}</span>
       </div>
-      <div style="font-size:12px;color:var(--faint);margin-top:16px">${o.legal}</div>
-      <p style="font-size:13px;color:var(--muted);margin-top:12px;line-height:1.55">${o.blurb}</p>
-      <div class="row gap6" style="margin-top:18px;font-size:13px;font-weight:500">
+      <div style="font-size:12.5px;color:var(--faint);margin-top:18px">${o.legal}</div>
+      <p style="font-size:13.5px;color:var(--muted);margin-top:12px;line-height:1.55">${o.blurb}</p>
+      <div class="row gap6" style="margin-top:20px;font-size:13.5px;font-weight:500">
         Sign in ${ic('right','icon-sm')}
       </div>
     </button>`;
   };
   return `<div class="center-screen fadein">
-    <div class="brandline" style="margin-bottom:6px">${kLogo()}<span class="name">kbridge</span></div>
-    <h1 style="font-size:24px;font-weight:600;letter-spacing:-.02em;margin-top:16px">Partner sign in</h1>
-    <p class="muted" style="font-size:13.5px;margin-top:6px;text-align:center;max-width:520px">
+    <div class="brandline" style="margin-bottom:8px">${kLogo(36)}<span class="name" style="font-size:22px">kbridge</span></div>
+    <h1 style="font-size:26px;font-weight:600;letter-spacing:-.02em;margin-top:16px">Partner sign in</h1>
+    <p class="muted" style="font-size:14px;margin-top:6px;text-align:center;max-width:520px">
       KBridge connects capital partners with the platforms that originate receivables.</p>
     <div class="gate-grid">${card('theoriq')}${card('pursuit')}</div>
   </div>`;
@@ -377,14 +447,14 @@ export function loginScreen(k){
   return `<div class="center-screen fadein">
     <div class="login-card">
       <div class="cobrand">
-        ${kLogo()}<span style="font-size:17px;font-weight:500;letter-spacing:-.02em">kbridge</span>
-        <span class="x"></span>
-        ${orgWord(k, 24)}
+        ${kLogo(34)}<span style="font-size:19px;font-weight:500;letter-spacing:-.02em">kbridge</span>
+        <span class="x" style="height:30px"></span>
+        ${orgWord(k, 36)}
       </div>
       <div class="card" style="border-radius:var(--r-xl);overflow:hidden">
         <div style="padding:30px 28px 26px">
           <div style="text-align:center;margin-bottom:22px">
-            <h2 style="font-size:18px;font-weight:600;letter-spacing:-.02em">Sign in to ${o.name}</h2>
+            <h2 style="font-size:19px;font-weight:600;letter-spacing:-.02em">Sign in to ${o.name}</h2>
             <p class="muted" style="font-size:13px;margin-top:6px">${o.tag}</p>
           </div>
           <div id="loginForm" class="stack gap16">
@@ -421,11 +491,11 @@ export function header(){
     <div class="hbar">
       <div class="row">
         <div class="brandline" style="cursor:pointer" data-act="view" data-view="dash">
-          ${kLogo()}<span class="name" style="border-right:1px solid var(--line);padding-right:16px">kbridge</span>
+          ${kLogo(30)}<span class="name" style="border-right:1px solid var(--line);padding-right:16px">kbridge</span>
         </div>
-        <div class="row gap8" style="margin-left:14px">
-          <span class="org-mark-only">${orgMark(S.org, 24)}</span>
-          <span class="org-name">${orgWord(S.org, 17)}</span>
+        <div class="row gap10" style="margin-left:16px">
+          <span class="org-mark-only">${orgMark(S.org, 28)}</span>
+          <span class="org-name">${orgWord(S.org, 24)}</span>
         </div>
         <nav class="nav">${tabs()}</nav>
       </div>
@@ -563,8 +633,8 @@ export function viewDashCapital(){
     const t = heldOf(p.key) + lockedOf(p.key), v = t * navOf(p), c = costOf(p.key), g = v - c;
     return `<button class="wrow" style="width:100%;text-align:left" data-act="platform" data-key="${p.key}">
       <div class="row gap12">
-        ${platformMark(p, 34)}
-        <div><div style="font-size:13.5px;font-weight:600">${p.name}</div>
+        ${platformMark(p, 40)}
+        <div><div style="font-size:14px;font-weight:600">${p.name}</div>
           <div class="addr">${nf(t,2)} ${p.symbol} · ${nav(navOf(p))} per token</div></div>
       </div>
       <div class="row gap16">
@@ -617,14 +687,20 @@ export function viewDashCapital(){
 
 /* ---------- 5. platforms list ---------- */
 export function platformMark(p, size){
-  const s = size||36;
-  const box = `width:${s}px;height:${s}px;border-radius:${Math.round(s/3.4)}px;flex:none;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;background:#fff;border:1px solid var(--line-soft);`;
+  const s = size || 44;
+  const rad = Math.round(s / 3.4);
+  const box = `width:${s}px;height:${s}px;border-radius:${rad}px;flex:none;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;background:#fff;border:1px solid var(--line-soft);box-shadow:0 1px 3px rgba(0,0,0,0.06);`;
   if (LOGO[p.key] && LOGO[p.key].icon) {
     return `<span class="brand-mark" style="${box}">
-      <img src="${LOGO[p.key].icon}" alt="${p.name}" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:contain;display:block;padding:2px"></span>`;
+      <img src="${LOGO[p.key].icon}" alt="${p.name}" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover;display:block"></span>`;
   }
-  return `<span style="${box}font-size:${Math.round(s*0.42)}px;font-weight:600;
-    background:${p.status==='Open'?'#141413':'#E4E4E0'};color:${p.status==='Open'?'#fff':'#6B6B66'}">${p.name[0]}</span>`;
+  return `<span class="brand-mark" style="${box}">
+    <svg viewBox="0 0 64 64" width="100%" height="100%" style="display:block">
+      <rect width="64" height="64" rx="14" fill="#1E293B"/>
+      <circle cx="32" cy="32" r="16" fill="none" stroke="#38BDF8" stroke-width="3.5"/>
+      <polygon points="32,20 42,38 22,38" fill="#10B981"/>
+    </svg>
+  </span>`;
 }
 export function viewPlatforms(){
   const cards = S.platforms.map(p => {
@@ -632,8 +708,8 @@ export function viewPlatforms(){
     const t = heldOf(p.key) + lockedOf(p.key);
     return `<div class="card card-pad" style="display:flex;flex-direction:column;gap:16px">
       <div class="between" style="align-items:flex-start">
-        <div class="row gap12">${platformMark(p, 42)}
-          <div><div style="font-size:15px;font-weight:600;letter-spacing:-.01em">${p.name}</div>
+        <div class="row gap12">${platformMark(p, 46)}
+          <div><div style="font-size:16px;font-weight:600;letter-spacing:-.01em">${p.name}</div>
             <div class="faint" style="font-size:12px">${p.legal} · ${p.sector}</div></div></div>
         ${statusBadge(p.status)}
       </div>
@@ -1097,6 +1173,14 @@ export function mintPreview(){
 }
 export function mintGo(){
   const p = PL(M.pf), w = wal(M.wid), tw = tokenWallet();
+  if (!w || M.amt <= 0) {
+    toast.error('Invalid mint amount', 'Please enter a valid USDC amount greater than zero.', 'alert');
+    return;
+  }
+  if (M.amt > w.usdc) {
+    toast.error('Insufficient balance', `Selected wallet only has ${nf(w.usdc, 2)} USDC.`, 'alert');
+    return;
+  }
   const dest = p.key === 'pursuit' ? fundWallets('pursuit').find(x => x.primary) : null;
   const amt = M.amt, tokens = mintTokens(), tx = hash();
   const steps = [
@@ -1121,7 +1205,7 @@ export function mintGo(){
       ], tx),
       `<button class="btn btn-ghost" data-act="close">Close</button>
        <button class="btn btn-primary" data-act="goto-platform" data-key="${p.key}">View platform ${ic('right','icon-sm')}</button>`));
-    toast('Minted '+nf(tokens,2)+' '+p.symbol, nf(amt,2)+' USDC settled to '+p.name, 'coins');
+    toast.success('Minted '+nf(tokens,2)+' '+p.symbol, nf(amt,2)+' USDC settled to '+p.name, 'coins');
   });
 }
 
@@ -1131,7 +1215,10 @@ export function mintGo(){
 export let R = {};
 export function redeemOpen(key){
   const held = S.platforms.filter(p => heldOf(p.key) > 0);
-  if (!held.length){ toast('No tokens to redeem', 'Mint on a platform first', 'alert'); return; }
+  if (!held.length){
+    toast.warn('No tokens to redeem', 'Mint tokens on an active platform first', 'alert');
+    return;
+  }
   const pf = (key && heldOf(key) > 0) ? key : held[0].key;
   const funds = fundWallets('theoriq');
   R = { pf, tokens: Math.floor(heldOf(pf)/2), wid:(funds.find(w=>w.primary)||funds[0]).id, step:'config' };
@@ -1212,6 +1299,11 @@ export function redeemPreview(){
 }
 export function redeemGo(){
   const p = PL(R.pf), tw = tokenWallet(), w = wal(R.wid);
+  const held = heldOf(p.key);
+  if (R.tokens <= 0 || R.tokens > held) {
+    toast.error('Invalid amount', `You have ${nf(held, 2)} ${p.symbol} available to redeem.`, 'alert');
+    return;
+  }
   const tokens = R.tokens, navAt = navOf(p), tx = hash();
   const id = 'RDM-' + String(43 + myRequests().length).padStart(4,'0');
   const steps = [
@@ -1231,7 +1323,7 @@ export function redeemGo(){
         ['Value per token', nav(navAt)], ['You receive', nf(tokens*navAt,2)+' USDC'], ['Into', w.label]
       ], tx),
       `<button class="btn btn-primary" data-act="close">Done</button>`));
-    toast('Request '+id+' submitted', nf(tokens,2)+' '+p.symbol+' locked', 'hourglass');
+    toast.success('Request '+id+' submitted', nf(tokens,2)+' '+p.symbol+' locked for settlement', 'hourglass');
   });
 }
 
@@ -1293,6 +1385,10 @@ export function honorPreview(){
 export function honorGo(){
   const r = S.requests.find(x => x.id === H.id), p = PL(r.pf), w = wal(H.wid), tw = tokenWallet();
   const total = r.tokens * H.price, tx = hash();
+  if (w.usdc < total) {
+    toast.error('Insufficient wallet balance', 'Selected funding wallet holds less than the payable amount.', 'alert');
+    return;
+  }
   const mine = r.holderKey === 'theoriq';
   const dest = mine ? S.wallets.find(x => x.address === r.payTo) : null;
   const steps = [
@@ -1316,7 +1412,7 @@ export function honorGo(){
         ['Value per token', nav(H.price)], ['Paid', nf(total,2)+' USDC'], ['From', w.label]
       ], tx),
       '<button class="btn btn-primary" data-act="close">Done</button>'));
-    toast('Settled '+r.id, nf(total,2)+' USDC paid', 'check');
+    toast.success('Settled '+r.id, nf(total,2)+' USDC paid to '+short(r.payTo), 'check');
   });
 }
 export function costPerToken(k){
@@ -1387,6 +1483,10 @@ export function publishPreview(){
 }
 export function publishGo(){
   const p = PL('pursuit'), per = N.per, prev = navOf(p), pool = per * p.outstanding;
+  if (per <= 0) {
+    toast.error('Invalid token valuation', 'Valuation price must be greater than zero.', 'alert');
+    return;
+  }
   const steps = [
     { label:'Signing today’s valuation', meta:'Pursuit Ops', ms:950 },
     { label:'Publishing '+nav(per)+' to every holder', meta:'Pool marked at '+nf(pool,2)+' USDC', ms:1150,
@@ -1402,7 +1502,7 @@ export function publishGo(){
         ['Change', pct((per/prev-1)*100)], ['Date', dstr(TODAY)]
       ], hash()),
       '<button class="btn btn-primary" data-act="close">Done</button>'));
-    toast('Published '+nav(per), pct((per/prev-1)*100)+' vs. yesterday', 'trend');
+    toast.success('Token value published: '+nav(per), pct((per/prev-1)*100)+' vs. yesterday', 'trend');
   });
 }
 
@@ -1437,16 +1537,25 @@ export function walletModalRender(){
   openModal(modalShell(w?'Edit wallet':'Add wallet', w?'Update this wallet':'Register a wallet to send and receive funds', 'wallet', body, foot));
 }
 export function walletSave(){
-  const label = document.getElementById('wLabel').value.trim();
-  const address = document.getElementById('wAddr').value.trim();
-  if (!label || !address){ toast('Name and address are required', '', 'alert'); return; }
-  if (WM.id){ const w = wal(WM.id); w.label = label; w.address = address; w.network = WM.net; toast('Wallet updated', label, 'check'); }
-  else {
+  const label = (document.getElementById('wLabel')||{}).value ? document.getElementById('wLabel').value.trim() : '';
+  const address = (document.getElementById('wAddr')||{}).value ? document.getElementById('wAddr').value.trim() : '';
+  if (!label || !address){
+    toast.error('Missing wallet details', 'Name and wallet address are required.', 'alert');
+    return;
+  }
+  if (WM.id){
+    const w = wal(WM.id);
+    w.label = label;
+    w.address = address;
+    w.network = WM.net;
+    toast.info('Wallet updated', label, 'check');
+  } else {
     const bal = Number((document.getElementById('wBal')||{}).value) || 0;
     S.wallets.push({ id:uid('w'), org:S.org, kind:'funds', label, address, network:WM.net, usdc:bal });
-    toast('Wallet added', label, 'check');
+    toast.success('Wallet registered', label + ' on ' + WM.net, 'wallet');
   }
-  closeModal(); render();
+  closeModal();
+  render();
 }
 export function walletDelete(id){
   const w = wal(id);
@@ -1480,7 +1589,7 @@ export function doLogin(){
   b.innerHTML = spinner + ' Signing in…'; b.disabled = true;
   setTimeout(() => {
     S.org = S.gateOrg; S.gateOrg = null; S.view = 'dash'; render();
-    toast('Signed in as '+ORGS[S.org].name, ORGS[S.org].tag, 'check');
+    toast.success('Signed in as '+ORGS[S.org].name, ORGS[S.org].tag, 'check');
   }, 800);
 }
 export function render(){
@@ -1510,6 +1619,21 @@ export function closeSelects(except){
 }
 
 document.addEventListener('click', e => {
+  const cp = e.target.closest('[data-copy]');
+  if (cp) {
+    const text = cp.dataset.copy || cp.textContent.trim();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        toast.success('Copied to clipboard', text.length > 20 ? short(text) : text, 'check');
+      }).catch(() => {
+        toast.info('Copied', text, 'check');
+      });
+    } else {
+      toast.info('Copied to clipboard', text, 'check');
+    }
+    return;
+  }
+
   const t = e.target.closest('[data-act]');
   if (e.target.id === 'ovl'){ closeModal(); return; }
   if (!t){ closeSelects(); return; }
@@ -1535,7 +1659,10 @@ document.addEventListener('click', e => {
   if (a === 'pick'){ S.gateOrg = t.dataset.org; render(); }
   else if (a === 'login'){ doLogin(); }
   else if (a === 'back-gate'){ S.gateOrg = null; render(); }
-  else if (a === 'logout'){ S.org = null; S.gateOrg = null; closeModal(); render(); }
+  else if (a === 'logout'){
+    S.org = null; S.gateOrg = null; closeModal(); render();
+    toast.info('Signed out', 'Returned to institutional portal gate', 'out');
+  }
   else if (a === 'view'){ go(t.dataset.view); }
   else if (a === 'platform'){ S.openPlatform = t.dataset.key; go('platform'); }
   else if (a === 'goto-platform'){ closeModal(); S.openPlatform = t.dataset.key; go('platform'); }
@@ -1569,12 +1696,12 @@ document.addEventListener('click', e => {
   else if (a === 'wallet-primary'){
     const w = wal(t.dataset.id);
     S.wallets.forEach(x => { if (x.org === w.org && x.kind === 'funds') x.primary = false; });
-    w.primary = true; render(); toast('Default wallet updated', w.label, 'check');
+    w.primary = true; render(); toast.success('Default wallet updated', w.label, 'check');
   }
   else if (a === 'wallet-del-go'){
     const w = wal(t.dataset.id);
     S.wallets = S.wallets.filter(x => x.id !== t.dataset.id);
-    closeModal(); render(); toast('Wallet removed', w.label, 'trash');
+    closeModal(); render(); toast.warn('Wallet removed', w.label, 'trash');
   }
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape'){ closeSelects(); closeModal(); } });
