@@ -441,7 +441,7 @@ export function navItems(){
     return [['dash','Admin Pipeline'],['redemptions','Redemptions'],['wallets','Wallets']];
   }
   return S.org === 'theoriq'
-    ? [['dash','Dashboard'],['platforms','Platforms'],['requests','Capital Requests'],['wallets','Wallets']]
+    ? [['dash','Dashboard'],['platforms','Platforms'],['wallets','Wallets']]
     : [['dash','Dashboard'],['requests','Note Requests'],['redemptions','Redemptions'],['wallets','Wallets']];
 }
 
@@ -460,17 +460,6 @@ export function header(){
         <nav class="nav" style="margin-left:24px">${tabs()}</nav>
       </div>
       <div class="row gap12" style="align-items:center">
-        ${S.org !== 'kbridge' ? `
-          ${!S.adminHidden ? `
-            <button class="kbridge-admin-pill" data-act="switch-role" data-org="kbridge" title="Switch to KBridge Admin Console">
-              <span>KBridge Admin</span>
-              <span class="pill-circle-arrow">${ic('right','icon-xs')}</span>
-              ${adminPendingCount > 0 ? `<span class="badge b-amber" style="padding:1px 6px;font-size:10px;margin-left:2px">${adminPendingCount}</span>` : ''}
-            </button>` : ''}
-          <button class="eye-toggle-btn" data-act="toggle-admin" title="${S.adminHidden ? 'Unhide KBridge Admin button' : 'Hide KBridge Admin button'}" aria-label="Toggle Admin Visibility">
-            ${ic(S.adminHidden ? 'eyeOff' : 'eye', 'icon-sm')}
-            ${S.adminHidden ? '<span style="font-size:11.5px;font-weight:500;color:var(--muted);margin-left:2px">Admin</span>' : ''}
-          </button>` : ''}
         <button class="bell" data-act="notif">${ic('bell')}<span class="pip"></span></button>
         <button class="wallet-chip" data-act="acct">
           <span class="mono chip-bal" style="font-size:13px;font-weight:500">${nf(orgCash(S.org),0)}<span class="faint" style="font-size:11px;margin-left:4px">USDC</span></span>
