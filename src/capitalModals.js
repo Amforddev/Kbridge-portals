@@ -2,6 +2,105 @@ import { ic, spinner, hash, uid, dstr, dshort, ago, inDays, nf, nav, pct, short,
 import { HEDERA_LOGO, HEDERA_MARK } from './assets.js';
 import { mintStatusBadge, pipelineStepper } from './capitalFlow.js';
 
+export function renderDocChip(doc, opts = {}) {
+  if (!doc) return '';
+  const docStr = encodeURIComponent(JSON.stringify(doc));
+  return `
+    <div class="doc-chip" style="${opts.style || ''}">
+      <div class="d-info">
+        <div style="width:34px;height:34px;border-radius:6px;background:#F8FAFC;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;flex:none;color:var(--ink)">
+          ${ic('fileText', 'icon-sm')}
+        </div>
+        <div style="min-width:0">
+          <div class="d-name" title="${esc(doc.name)}">${esc(doc.name)}</div>
+          <div class="d-size">${esc(doc.size || '1.8 MB')} · ${doc.signer ? 'Signed by ' + esc(doc.signer) : 'SHA-256: ' + short(doc.hash || '0x000...')}</div>
+        </div>
+      </div>
+      <div class="row gap6" style="align-items:center;flex:none">
+        <button class="doc-eye-btn" data-act="preview-doc" data-doc="${docStr}" title="Preview file metadata and status" aria-label="Preview Document">
+          ${ic('eye', 'icon-xs')} <span>Preview</span>
+        </button>
+        ${opts.showDownload ? `<button class="btn btn-ghost btn-xs" data-act="download-doc" data-name="${esc(doc.name)}" title="Download Document">${ic('download', 'icon-xs')}</button>` : ''}
+        ${opts.badge ? `<span class="badge ${opts.badgeClass || 'b-green'}">${opts.badge}</span>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+export function openDocumentPreviewModal(doc, S, ctx) {
+  if (!doc) return;
+  const hashVal = doc.hash || hash();
+  const uploadDate = doc.uploadedAt ? (doc.uploadedAt instanceof Date ? doc.uploadedAt : new Date(doc.uploadedAt)) : new Date(TODAY);
+
+  const body = `
+    <div style="margin-bottom:16px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:var(--r);padding:14px 16px">
+      <div class="between" style="align-items:flex-start;margin-bottom:10px">
+        <div class="row gap12" style="align-items:center">
+          <div style="width:42px;height:42px;border-radius:8px;background:#fff;border:1px solid var(--line);box-shadow:var(--shadow-xs);display:flex;align-items:center;justify-content:center;color:#0F172A">
+            ${ic('fileText', 'icon-md')}
+          </div>
+          <div>
+            <div style="font-size:15px;font-weight:600;color:var(--ink)">${esc(doc.name)}</div>
+            <div class="faint" style="font-size:12px">${doc.docType || 'Legal Agreement & Note Document'} · ${doc.size || '1.8 MB'}</div>
+          </div>
+        </div>
+        <span class="badge b-green">${ic('check', 'icon-xs')} ${doc.status || 'Verified & Ready'}</span>
+      </div>
+
+      <div class="grid grid-2 gap8 faint" style="font-size:12px;border-top:1px solid #E2E8F0;padding-top:10px">
+        <div>• Checksum: <b class="mono" style="color:var(--ok)">SHA-256 Validated</b></div>
+        <div>• Security: <b style="color:var(--ink)">AES-256-GCM Encrypted</b></div>
+        <div>• Ledger State: <b style="color:var(--ink)">Hedera File Service (HFS)</b></div>
+        <div>• Digital Seal: <b style="color:var(--ink)">Secured by SPV Custodian</b></div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:0.04em;margin-bottom:8px">
+        File Metadata &amp; Status
+      </div>
+      <div class="kv"><span class="k">File Name</span><span class="v mono" style="font-size:12.5px">${esc(doc.name)}</span></div>
+      <div class="kv"><span class="k">File Size</span><span class="v mono">${doc.size || '1.8 MB'}</span></div>
+      <div class="kv"><span class="k">Upload Date</span><span class="v">${dstr(uploadDate)} · <span class="faint mono">${ago(uploadDate)}</span></span></div>
+      <div class="kv"><span class="k">Authorized Signer</span><span class="v" style="font-weight:500">${esc(doc.signer || 'Authorized Officer')}</span></div>
+      <div class="kv"><span class="k">Backing Reference</span><span class="v mono">${esc(doc.facilityId || 'INV-2026-9004')}</span></div>
+      <div class="kv"><span class="k">Cryptographic Hash</span><span class="v mono" data-copy="${hashVal}" style="cursor:pointer" title="Click to copy">${short(hashVal)} ${ic('copy','icon-xs')}</span></div>
+      <div class="kv kv-total"><span class="k" style="color:var(--ink);font-weight:500">Verification Status</span><span class="v badge b-green" style="font-size:11.5px">${ic('check','icon-xs')} ${doc.status || 'Verified & Compliant'}</span></div>
+    </div>
+
+    <div class="card card-pad" style="background:#FFFFFF;border:1px solid var(--line);box-shadow:var(--shadow-xs)">
+      <div class="between" style="border-bottom:1px dashed var(--line);padding-bottom:10px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted)">Document Inspection Preview</div>
+        <div class="mono faint" style="font-size:11px">Hedera File ID: 0.0.491204</div>
+      </div>
+      <div style="font-family:Georgia, serif;font-size:12.5px;line-height:1.6;color:#334155;background:#FAFAFA;padding:14px;border-radius:var(--r);border:1px solid #F1F5F9">
+        <div style="text-align:center;font-weight:bold;font-size:13px;margin-bottom:6px;color:#0F172A;text-transform:uppercase;letter-spacing:0.03em">
+          ${doc.docType || 'Institutional Promissory Note & Facility Assignment'}
+        </div>
+        <div style="text-align:center;font-size:11px;color:#64748B;margin-bottom:12px;font-family:sans-serif">
+          Ref: ${doc.facilityId || 'FAC-2026'} · Protocol Checksum: ${short(hashVal)}
+        </div>
+        <p style="margin:0 0 8px">
+          This digital document constitutes a binding, non-revocable legal instrument certified on the KBridge Protocol. The underlying token burn/mint and payment obligations are secured under Delaware SPV jurisdiction.
+        </p>
+        <div class="between" style="font-family:sans-serif;font-size:11px;margin-top:12px;padding-top:8px;border-top:1px solid #E2E8F0;color:#64748B">
+          <div>Signer: <b>${esc(doc.signer || 'Authorized Officer')}</b></div>
+          <div>Status: <span style="color:var(--ok);font-weight:600">Digitally Executed</span></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const foot = `
+    <button class="btn btn-ghost" data-act="download-doc" data-name="${esc(doc.name)}">
+      ${ic('download', 'icon-sm')} Download Document
+    </button>
+    <button class="btn btn-primary" data-act="close">Close</button>
+  `;
+
+  ctx.openModal(ctx.modalShell('Document Preview &amp; Metadata', 'Cryptographic verification and status audit', 'fileText', body, foot));
+}
+
 export function openRequestNotesModal(reqId, S, ctx) {
   const r = S.mintRequests.find(x => x.id === reqId);
   if (!r) return;
@@ -143,16 +242,7 @@ export function openUploadNotesModal(reqId, S, ctx) {
     </label>
 
     <div id="docPreviewArea" style="margin-bottom:16px">
-      <div class="doc-chip">
-        <div class="d-info">
-          ${ic('fileText', 'icon-sm')}
-          <div>
-            <div class="d-name" id="docNameDisplay">${stagedDoc.name}</div>
-            <div class="d-size" id="docMetaDisplay">${stagedDoc.size} · SHA-256: ${short(stagedDoc.hash)}</div>
-          </div>
-        </div>
-        <span class="badge b-green">${ic('check', 'icon-xs')} Ready</span>
-      </div>
+      ${renderDocChip(stagedDoc, { badge: `${ic('check', 'icon-xs')} Ready`, badgeClass: 'b-green' })}
     </div>
 
     <div class="grid grid-2 gap12">
@@ -230,7 +320,7 @@ export function openInspectAndMintModal(reqId, S, ctx) {
 
   const capWallet = ctx.wal(ctx.fundWallets('theoriq')[0]?.id) || { address: r.payFrom, usdc: 100000, label: 'Capital Partner Treasury' };
   const origWallet = ctx.wal(ctx.fundWallets('pursuit')[0]?.id) || { address: r.destWallet, usdc: 0, label: 'Originator Partner Funding Wallet' };
-  const tokenCustody = ctx.tokenWallet() || { address: r.tokenCustody, bal: { pursuit: 0, meridian: 0, aster: 0 } };
+  const tokenCustody = ctx.tokenWallet() || { address: r.tokenCustody, bal: { pursuit: 0 } };
 
   const body = `
     <div style="margin-bottom:16px">
@@ -245,15 +335,8 @@ export function openInspectAndMintModal(reqId, S, ctx) {
         <span class="badge b-green">${ic('check', 'icon-xs')} Verified</span>
       </div>
 
-      <div class="doc-chip" style="margin-bottom:10px">
-        <div class="d-info">
-          ${ic('fileText', 'icon-sm')}
-          <div>
-            <div class="d-name">${doc.name}</div>
-            <div class="d-size">${doc.size} · Signed by ${esc(doc.signer)}</div>
-          </div>
-        </div>
-        <div class="mono faint" style="font-size:11px">${short(doc.hash)}</div>
+      <div style="margin-bottom:10px">
+        ${renderDocChip(doc, { badge: `${ic('check', 'icon-xs')} Verified`, badgeClass: 'b-green' })}
       </div>
 
       <div class="grid grid-2 gap8 faint" style="font-size:12px">
@@ -412,16 +495,7 @@ export function openRequestDetailsModal(reqId, S, ctx) {
     ${doc ? `
       <div style="margin-top:16px">
         <div class="micro" style="margin-bottom:6px">Attached Notes &amp; Contracts</div>
-        <div class="doc-chip">
-          <div class="d-info">
-            ${ic('fileText', 'icon-sm')}
-            <div>
-              <div class="d-name">${doc.name}</div>
-              <div class="d-size">${doc.size} · Facility: ${doc.facilityId || 'INV-2026-8921'}</div>
-            </div>
-          </div>
-          <button class="btn btn-ghost btn-sm" data-act="download-doc" data-name="${doc.name}">${ic('download', 'icon-xs')} Download</button>
-        </div>
+        ${renderDocChip(doc, { showDownload: true })}
       </div>
     ` : `
       <div class="callout c-neutral" style="margin-top:16px">

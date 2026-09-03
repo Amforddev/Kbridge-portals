@@ -1,7 +1,7 @@
 import { LOGO, PLATFORM_LOGOS, HEDERA_LOGO, HEDERA_MARK } from './assets.js';
 import { P, ic, spinner, TODAY, uid, hash, nf, usdc, tok, nav, pct, short, esc, dstr, dshort, ago, inDays, kLogo } from './helpers.js';
 import { INITIAL_MINT_REQUESTS, mintStatusBadge, pipelineStepper, viewAdminDashboard, viewCapitalPartnerRequests, viewOriginatorNoteRequests } from './capitalFlow.js';
-import { openRequestNotesModal, openUploadNotesModal, openInspectAndMintModal, openRequestDetailsModal } from './capitalModals.js';
+import { openRequestNotesModal, openUploadNotesModal, openInspectAndMintModal, openRequestDetailsModal, renderDocChip, openDocumentPreviewModal } from './capitalModals.js';
 
 /* ============================================================
    KBridge — partner portal
@@ -66,30 +66,14 @@ export const S = {
         { id:'INV-2026-9004', name:'Vertex Robotics Inc.',            sector:'Robotics',      amount:180000, yield:6.4, term:60,  status:'Active' },
         { id:'INV-2026-9011', name:'Nexus Healthcare Inc.',           sector:'Healthcare',    amount:320000, yield:5.8, term:90,  status:'Funding' },
         { id:'INV-2026-9017', name:'Oasis Agriculture Inc.',          sector:'Agriculture',   amount:140000, yield:6.9, term:45,  status:'Matured' }
-      ]},
-    { key:'meridian', name:'Meridian Trade Finance', legal:'Meridian TF Series II', symbol:'MTF',
-      sector:'Freight & logistics', terms:'30–60 day invoices',
-      desc:'Cross-border freight and customs invoices from established forwarders, on shorter terms and a lower yield.',
-      status:'Open', opened:new Date(TODAY.getTime()-121*86400000), inception:1.0000,
-      outstanding:1860000, history:series(121, 0.00018, 40),
-      wallet:'0xkb77a4c1e9b0d32a58e2704c19db8365fa07c418',
-      facilities:[
-        { id:'INV-2026-7710', name:'Northline Freight Group',   sector:'Logistics', amount:210000, yield:5.4, term:45, status:'Active' },
-        { id:'INV-2026-7744', name:'Harbour Point Forwarding',  sector:'Logistics', amount:130000, yield:6.1, term:60, status:'Active' },
-        { id:'INV-2026-7802', name:'Cedar Customs Services',    sector:'Logistics', amount:95000,  yield:5.9, term:30, status:'Funding' }
-      ]},
-    { key:'aster', name:'Aster Working Capital', legal:'Aster WC Series I', symbol:'AWC',
-      sector:'Working capital', terms:'Revolving, 90 day',
-      desc:'Revolving working-capital notes for mid-market suppliers. Opens to capital partners next quarter.',
-      status:'Opening soon', opened:new Date(TODAY.getTime()+34*86400000), inception:1.0000,
-      outstanding:0, history:[], wallet:'', facilities:[] }
+      ]}
   ],
 
   wallets: [
     { id:'w-t1', org:'theoriq', kind:'funds',  label:'Capital Partner Treasury', address:'0x8f3ad2b91c4e77a0d5be612f9a3c8471e0d92b64', network:'Hedera', usdc:100000, primary:true },
     { id:'w-t2', org:'theoriq', kind:'funds',  label:'Capital Partner Reserve', address:'0x22c9f4e81a07d3b6c25ef90ba14d7736e8c01f52', network:'Hedera', usdc:45000 },
     { id:'w-t3', org:'theoriq', kind:'tokens', label:'Capital Partner Token Custody', address:'0xa10b73ce55f2419d8ab6c0e73f81d2495ba7c318', network:'Hedera',
-      bal:{ pursuit:0, meridian:0, aster:0 }, lock:{ pursuit:0, meridian:0, aster:0 }, immutable:true },
+      bal:{ pursuit:0 }, lock:{ pursuit:0 }, immutable:true },
     { id:'w-p1', org:'pursuit', kind:'funds',  label:'Originator Partner Funding Wallet', address:'0x5d71ac09e4b83f26d1c7590ae4bb3f8021d64c7a', network:'Hedera', usdc:0, primary:true },
     { id:'w-p2', org:'pursuit', kind:'funds',  label:'Originator Partner Settlement Reserve', address:'0x9b48c7e0135da62f9c84be71a0d35f2647ce9810', network:'Hedera', usdc:500000 }
   ],
@@ -99,14 +83,53 @@ export const S = {
   requests: [
     { id:'RDM-0042', pf:'pursuit', holder:'Theoriq', holderKey:'theoriq', tokens:120000, navAt:1.0388,
       payTo:'0x8f3a2b64c1e0d9a8f27c89b0a1d4e789f2a02b64',
-      created:new Date(TODAY.getTime()-2*86400000), lockUntil:new Date(TODAY.getTime()+1*86400000), status:'Pending' },
+      created:new Date(TODAY.getTime()-2*86400000), lockUntil:new Date(TODAY.getTime()+1*86400000), status:'Pending',
+      documents: [
+        {
+          name: 'Redemption_Notice_RDM-0042_PUR.pdf',
+          size: '1.9 MB',
+          uploadedAt: new Date(TODAY.getTime()-2*86400000),
+          hash: '0x5c8291a039b8172901a84729104b912389108c901823901bcae8291038291028',
+          signer: 'Theoriq Capital Partner Treasury',
+          facilityId: 'INV-2026-9004',
+          status: 'Verified & Queued',
+          docType: 'Institutional Token Burn & Redemption Notice'
+        }
+      ]
+    },
     { id:'RDM-0041', pf:'pursuit', holder:'Theoriq', holderKey:'theoriq', tokens:65000, navAt:1.0371,
       payTo:'0x8f3a2b64c1e0d9a8f27c89b0a1d4e789f2a02b64',
-      created:new Date(TODAY.getTime()-3*86400000), lockUntil:new Date(TODAY.getTime()+2*86400000), status:'Pending' },
+      created:new Date(TODAY.getTime()-3*86400000), lockUntil:new Date(TODAY.getTime()+2*86400000), status:'Pending',
+      documents: [
+        {
+          name: 'Redemption_Notice_RDM-0041_PUR.pdf',
+          size: '2.1 MB',
+          uploadedAt: new Date(TODAY.getTime()-3*86400000),
+          hash: '0x49102839018290381029387a8291bf02c890184b912389108c901823901bcae8',
+          signer: 'Theoriq Capital Partner Treasury',
+          facilityId: 'INV-2026-8921',
+          status: 'Verified & Queued',
+          docType: 'Institutional Token Burn & Redemption Notice'
+        }
+      ]
+    },
     { id:'RDM-0039', pf:'pursuit', holder:'Theoriq', holderKey:'theoriq', tokens:40000, navAt:1.0342,
       payTo:'0x8f3a2b64c1e0d9a8f27c89b0a1d4e789f2a02b64',
       created:new Date(TODAY.getTime()-9*86400000), lockUntil:new Date(TODAY.getTime()-5*86400000),
-      status:'Settled', paid:41368, settledAt:new Date(TODAY.getTime()-7*86400000) }
+      status:'Settled', paid:41368, settledAt:new Date(TODAY.getTime()-7*86400000),
+      documents: [
+        {
+          name: 'Settlement_Receipt_RDM-0039_PUR.pdf',
+          size: '1.4 MB',
+          uploadedAt: new Date(TODAY.getTime()-7*86400000),
+          hash: '0x1029384820194820194820194820194820194820194820194820194820194820',
+          signer: 'Pursuit Originator Settlement Desk',
+          facilityId: 'INV-2026-8921',
+          status: 'Settled & Burned on Hedera',
+          docType: 'Redemption Settlement & Burn Receipt'
+        }
+      ]
+    }
   ],
 
   positions: [],
@@ -142,7 +165,8 @@ export const pfRequests = k => S.requests.filter(r => r.pf === k);
 
 /* ---------- seed derived copy ---------- */
 (function seed(){
-  const p = PL('pursuit'), m = PL('meridian');
+  const p = PL('pursuit');
+  if (!p) return;
   const h = p.history, n = h.length;
   const cur = h[n-1].v, d1 = h[n-2].v, d2 = h[n-3].v, d4 = h[n-5].v;
   S.navPublishes = [
@@ -150,20 +174,20 @@ export const pfRequests = k => S.requests.filter(r => r.pf === k);
     { pf:'pursuit', at:new Date(TODAY.getTime()-40*3600000), value:d1,  pool:d1*p.outstanding,  by:'Originating Party' },
     { pf:'pursuit', at:new Date(TODAY.getTime()-64*3600000), value:d2,  pool:d2*p.outstanding,  by:'Originating Party' }
   ];
-  S.requests[0].navAt = d1; S.requests[1].navAt = d2; S.requests[2].navAt = d4;
-  S.requests[2].paid = +(S.requests[2].tokens * d4).toFixed(2);
+  if (S.requests && S.requests.length >= 3) {
+    S.requests[0].navAt = d1; S.requests[1].navAt = d2; S.requests[2].navAt = d4;
+    S.requests[2].paid = +(S.requests[2].tokens * d4).toFixed(2);
+  }
 
   S.feed = [
     { ic:'coins', tone:'neutral', text:'Capital partner minted 300,000.00 PUR.', at:new Date(TODAY.getTime()-6*3600000) },
     { ic:'trend', tone:'green',   text:'Originating party published a token value of '+nav(cur)+' ('+pct((cur/d1-1)*100)+' vs. prior day).', at:new Date(TODAY.getTime()-16*3600000) },
-    { ic:'trend', tone:'green',   text:'Meridian Trade Finance published a token value of '+nav(navOf(m))+'.', at:new Date(TODAY.getTime()-19*3600000) },
     { ic:'file',  tone:'gray',    text:'Facility INV-2026-9017 matured and settled into the pool.', at:new Date(TODAY.getTime()-26*3600000) },
     { ic:'flame', tone:'amber',   text:'Redemption RDM-0039 settled — 40,000.00 PUR burned.', at:new Date(TODAY.getTime()-7*86400000) }
   ];
   S.notifications = [
     { text:'Originating party published a new token value: '+nav(cur)+'.', at:'16h ago', unread:true },
-    { text:'Redemption RDM-0042 is awaiting settlement.', at:'2 days ago', unread:true },
-    { text:'Aster Working Capital opens to capital partners on '+dstr(PL('aster').opened)+'.', at:'4 days ago', unread:false }
+    { text:'Redemption RDM-0042 is awaiting settlement.', at:'2 days ago', unread:true }
   ];
 })();
 
@@ -361,22 +385,7 @@ export function gateScreen(){
     </button>`;
   };
 
-  const adminPendingCount = (S.mintRequests || []).filter(r => r.status === 'Pending Admin Review' || r.status === 'Documents Uploaded').length;
-
   return `<div class="center-screen fadein" style="position:relative">
-    <div class="top-right-admin-bar">
-      ${!S.adminHidden ? `
-        <button class="kbridge-admin-pill" data-act="login-admin" title="Sign in as KBridge Admin">
-          <span>KBridge Admin</span>
-          <span class="pill-circle-arrow">${ic('right','icon-xs')}</span>
-          ${adminPendingCount > 0 ? `<span class="badge b-amber" style="padding:1px 6px;font-size:10px;margin-left:2px">${adminPendingCount}</span>` : ''}
-        </button>` : ''}
-      <button class="eye-toggle-btn" data-act="toggle-admin" title="${S.adminHidden ? 'Unhide KBridge Admin button' : 'Hide KBridge Admin button'}" aria-label="Toggle Admin Visibility">
-        ${ic(S.adminHidden ? 'eyeOff' : 'eye', 'icon-sm')}
-        ${S.adminHidden ? '<span style="font-size:12px;font-weight:500;color:var(--muted)">Admin</span>' : ''}
-      </button>
-    </div>
-
     <div class="brandline" style="margin-bottom:8px">${kLogo(36)}<span class="name" style="font-size:22px">kbridge</span></div>
     <h1 style="font-size:26px;font-weight:600;letter-spacing:-.02em;margin-top:16px">Partner sign in</h1>
     <p class="muted" style="font-size:14px;margin-top:6px;text-align:center;max-width:520px">
@@ -388,22 +397,7 @@ export function gateScreen(){
 /* ---------- 2. branded login ---------- */
 export function loginScreen(k){
   const o = ORGS[k];
-  const adminPendingCount = (S.mintRequests || []).filter(r => r.status === 'Pending Admin Review' || r.status === 'Documents Uploaded').length;
-
   return `<div class="center-screen fadein" style="position:relative">
-    <div class="top-right-admin-bar">
-      ${!S.adminHidden ? `
-        <button class="kbridge-admin-pill" data-act="login-admin" title="Sign in as KBridge Admin">
-          <span>KBridge Admin</span>
-          <span class="pill-circle-arrow">${ic('right','icon-xs')}</span>
-          ${adminPendingCount > 0 ? `<span class="badge b-amber" style="padding:1px 6px;font-size:10px;margin-left:2px">${adminPendingCount}</span>` : ''}
-        </button>` : ''}
-      <button class="eye-toggle-btn" data-act="toggle-admin" title="${S.adminHidden ? 'Unhide KBridge Admin button' : 'Hide KBridge Admin button'}" aria-label="Toggle Admin Visibility">
-        ${ic(S.adminHidden ? 'eyeOff' : 'eye', 'icon-sm')}
-        ${S.adminHidden ? '<span style="font-size:12px;font-weight:500;color:var(--muted)">Admin</span>' : ''}
-      </button>
-    </div>
-
     <div class="login-card">
       <div class="cobrand">
         ${kLogo(34)}<span style="font-size:19px;font-weight:500;letter-spacing:-.02em">kbridge</span>
@@ -557,10 +551,29 @@ export function requestRows(list, opts){
   return list.map(r => {
     const p = PL(r.pf);
     const val = r.status === 'Settled' ? (r.paid || r.tokens*r.navAt) : r.tokens*navOf(p);
+    const doc = (r.documents && r.documents[0]) || {
+      name: `Redemption_Notice_${r.id}_${p ? p.symbol : 'PUR'}.pdf`,
+      size: '1.8 MB',
+      uploadedAt: r.created,
+      hash: hash(),
+      signer: `${r.holder} Capital Partner Treasury`,
+      facilityId: p && p.key === 'pursuit' ? 'INV-2026-9004' : 'INV-GEN-2026',
+      status: r.status === 'Settled' ? 'Settled & Burned on Hedera' : 'Verified & Queued',
+      docType: 'Institutional Token Burn & Redemption Notice'
+    };
+    const docStr = encodeURIComponent(JSON.stringify(doc));
+
     return `<tr class="hover-row">
-      <td class="mono" style="font-weight:500">${r.id}</td>
-      ${opts.showHolder ? '<td>'+esc(r.holder)+'<div class="faint mono" style="font-size:11px">'+short(r.payTo)+'</div></td>' : '<td>'+p.name+'</td>'}
-      <td class="mono t-right">${nf(r.tokens,2)} ${p.symbol}</td>
+      <td class="mono" style="font-weight:500">
+        <div class="row gap8" style="align-items:center">
+          <span>${r.id}</span>
+          <button class="doc-eye-btn" data-act="preview-doc" data-doc="${docStr}" title="Preview file metadata and status" style="padding:2px 7px;font-size:11px">
+            ${ic('eye','icon-xs')} <span>Doc</span>
+          </button>
+        </div>
+      </td>
+      ${opts.showHolder ? '<td>'+esc(r.holder)+'<div class="faint mono" style="font-size:11px">'+short(r.payTo)+'</div></td>' : '<td>'+(p ? p.name : 'Platform')+'</td>'}
+      <td class="mono t-right">${nf(r.tokens,2)} ${p ? p.symbol : 'TOK'}</td>
       <td class="mono t-right" style="font-weight:500">${nf(val,2)}</td>
       <td class="mono">${dshort(r.created)}<div class="faint" style="font-size:11px">${ago(r.created)}</div></td>
       <td>${statusBadge(r.status)}</td>
@@ -674,15 +687,13 @@ export function viewPlatforms(){
       <div class="between" style="gap:12px">
         <div class="faint" style="font-size:12px">${t>0 ? 'You hold <span class="mono">'+nf(t,2)+' '+p.symbol+'</span>' : (open? 'No position' : 'Opens '+dstr(p.opened))}</div>
         <div class="row gap8">
-          ${open? `<button class="btn btn-ghost btn-sm" data-act="platform" data-key="${p.key}">View</button>
-                   <button class="btn btn-primary btn-sm" data-act="mint" data-key="${p.key}">Mint tokens</button>`
-                : `<button class="btn btn-ghost btn-sm" disabled>Not open yet</button>`}
+          <button class="btn btn-primary btn-sm" data-act="platform" data-key="${p.key}">View</button>
         </div>
       </div>
     </div>`;
   }).join('');
 
-  return `${pageHead('Platforms', 'Every receivables platform on KBridge. Mint tokens on the ones that are open.', '')}
+  return `${pageHead('Platforms', 'Receivables platforms on KBridge. Track pool metrics, token valuation, and facility details.', '')}
   <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(min(400px,100%),1fr))">${cards}</div>`;
 }
 
@@ -1088,8 +1099,7 @@ export function mintRender(){
       <div class="stack" style="gap:9px">
         ${[['1','USDC leaves '+esc(w.label)],
            ['2',nf(mintTokens(),2)+' '+p.symbol+' is minted'],
-           ['3','Tokens are delivered to '+esc(tw.label)],
-           ['4','USDC settles to the originating party’s funding wallet']].map(([n,t]) =>
+           ['3','USDC settles to the originating party’s funding wallet']].map(([n,t]) =>
           `<div class="row gap12" style="font-size:13px;color:var(--ink-2)">
             <span class="numdot mono">${n}</span>${t}</div>`).join('')}
       </div>
@@ -1159,7 +1169,7 @@ export function mintGo(){
         <div class="tick">${ic('check','icon-lg')}</div>
         <h3 style="font-size:17px;font-weight:600;margin-top:14px">Capital Request Submitted</h3>
         <p class="muted" style="font-size:13.5px;max-width:440px;margin:6px auto 0">
-          Request <b class="mono" style="color:var(--ink)">${reqId}</b> has been received by KBridge Protocol administrators.
+          Request <b class="mono" style="color:var(--ink)">${reqId}</b> has been received by KBridge administrators. You will be notified once the status updates.
         </p>
       </div>
 
@@ -1184,10 +1194,7 @@ export function mintGo(){
     `;
 
     const foot = `
-      <button class="btn btn-ghost" data-act="close">Close</button>
-      <button class="btn btn-primary" data-act="switch-role" data-org="kbridge">
-        ${ic('shield','icon-sm')} Open KBridge Admin to Process
-      </button>
+      <button class="btn btn-primary" data-act="close">Close</button>
     `;
 
     openModal(modalShell('Capital Request Active', reqId, 'coins', body, foot));
@@ -1216,6 +1223,17 @@ export function redeemRender(){
   const value = R.tokens * navOf(p);
   const lockUntil = new Date(TODAY.getTime() + 2*86400000);
   const heldPfs = S.platforms.filter(x => heldOf(x.key) > 0);
+
+  const stagedDoc = {
+    name: `Redemption_Notice_${p.symbol}_Burn.pdf`,
+    size: '1.8 MB',
+    uploadedAt: new Date(TODAY),
+    hash: hash(),
+    signer: 'Theoriq Capital Partner Treasury',
+    facilityId: p.key === 'pursuit' ? 'INV-2026-9004' : 'INV-GEN-2026',
+    status: 'Verified & Queued',
+    docType: 'Institutional Token Burn & Redemption Notice'
+  };
 
   if (R.step === 'config'){
     const body = `
@@ -1248,6 +1266,11 @@ export function redeemRender(){
           <span class="v mono" style="font-size:15px">${nf(value,2)} USDC</span></div>
       </div>
 
+      <div style="margin-top:14px;margin-bottom:14px">
+        <div class="micro" style="margin-bottom:6px">Redemption Burn Authorization Note</div>
+        ${renderDocChip(stagedDoc)}
+      </div>
+
       <div class="callout c-amber">${ic('lock','icon-sm')}<div>
         These tokens are locked as soon as you submit, until the originating party settles the request.</div></div>`;
     const foot = `<button class="btn btn-ghost" data-act="close">Cancel</button>
@@ -1271,6 +1294,12 @@ export function redeemRender(){
       <div class="kv kv-total"><span class="k" style="color:var(--ink);font-weight:500">You receive</span>
         <span class="v mono" style="font-size:15px">${nf(R.tokens*navOf(p),2)} USDC</span></div>
     </div>
+
+    <div style="margin-top:14px;margin-bottom:14px">
+      <div class="micro" style="margin-bottom:6px">Attached Burn Authorization Note</div>
+      ${renderDocChip(stagedDoc)}
+    </div>
+
     <div class="callout c-neutral">${ic('info','icon-sm')}<div>
       The request goes into the originating party’s settlement queue. You can follow it from your dashboard.</div></div>`;
   const foot = `<button class="btn btn-ghost" data-act="rdm-back">Back</button>
@@ -1293,22 +1322,41 @@ export function redeemGo(){
   }
   const tokens = R.tokens, navAt = navOf(p), tx = hash();
   const id = 'RDM-' + String(43 + myRequests().length).padStart(4,'0');
+  const doc = {
+    name: `Redemption_Notice_${id}_${p.symbol}.pdf`,
+    size: '1.8 MB',
+    uploadedAt: new Date(TODAY),
+    hash: tx,
+    signer: 'Theoriq Capital Partner Treasury',
+    facilityId: p.key === 'pursuit' ? 'INV-2026-9004' : 'INV-GEN-2026',
+    status: 'Verified & Queued',
+    docType: 'Institutional Token Burn & Redemption Notice'
+  };
+
   const steps = [
     { label:'Checking your balance', meta:nf(heldOf(p.key),2)+' '+p.symbol+' available', ms:950 },
     { label:'Locking '+nf(tokens,2)+' '+p.symbol, meta:'Released when settled or on '+dstr(new Date(TODAY.getTime()+2*86400000)), ms:1050,
       fx:()=>{ tw.bal[p.key] -= tokens; tw.lock[p.key] += tokens; } },
     { label:'Sending the request to the originating party', meta:'Queued as '+id, ms:1050,
       fx:()=>{ S.requests.unshift({ id, pf:p.key, holder:'Capital Partner', holderKey:'theoriq', tokens, navAt,
-        payTo:w.address, created:new Date(TODAY), lockUntil:new Date(TODAY.getTime()+2*86400000), status:'Pending' }); } }
+        payTo:w.address, created:new Date(TODAY), lockUntil:new Date(TODAY.getTime()+2*86400000), status:'Pending',
+        documents: [doc] }); } }
   ];
   openModal(modalShell('Submitting', nf(tokens,2)+' '+p.symbol, 'flame', '<div class="steps"></div>', ''));
   execSteps(steps, () => {
     S.feed.unshift({ ic:'flame', tone:'amber', text:'You requested redemption of '+nf(tokens,2)+' '+p.symbol+' ('+id+').', at:new Date(TODAY) });
-    openModal(modalShell('Request submitted', 'The originating party will settle it from the queue', 'check',
-      successBlock('Request '+id+' submitted', [
+    const successContent = `
+      ${successBlock('Request '+id+' submitted', [
         ['Platform', p.name], ['Tokens locked', nf(tokens,2)+' '+p.symbol],
         ['Value per token', nav(navAt)], ['You receive', nf(tokens*navAt,2)+' USDC'], ['Into', w.label]
-      ], tx),
+      ], tx)}
+      <div style="margin-top:16px">
+        <div class="micro" style="margin-bottom:6px">Attached Redemption Burn Certificate</div>
+        ${renderDocChip(doc)}
+      </div>
+    `;
+    openModal(modalShell('Request submitted', 'The originating party will settle it from the queue', 'check',
+      successContent,
       `<button class="btn btn-primary" data-act="close">Done</button>`));
     toast.success('Request '+id+' submitted', nf(tokens,2)+' '+p.symbol+' locked for settlement', 'hourglass');
   });
@@ -1327,6 +1375,17 @@ export function honorOpen(id){
 export function honorRender(){
   const r = S.requests.find(x => x.id === H.id), p = PL(r.pf);
   const w = wal(H.wid), total = r.tokens * H.price, short_ = w.usdc < total;
+  const doc = (r.documents && r.documents[0]) || {
+    name: `Redemption_Notice_${r.id}_${p.symbol}.pdf`,
+    size: '1.8 MB',
+    uploadedAt: r.created,
+    hash: hash(),
+    signer: `${r.holder} Capital Partner Treasury`,
+    facilityId: p.key === 'pursuit' ? 'INV-2026-9004' : 'INV-GEN-2026',
+    status: 'Verified & Queued',
+    docType: 'Institutional Token Burn & Redemption Notice'
+  };
+
   const body = `
     <div class="panel">
       <div class="between">
@@ -1337,6 +1396,11 @@ export function honorRender(){
           <div class="mono" style="font-size:15px;font-weight:600;margin-top:3px">${nf(r.tokens,2)} ${p.symbol}</div>
           <div class="faint" style="font-size:11px">locked ${inDays(r.lockUntil)}</div></div>
       </div>
+    </div>
+
+    <div style="margin-top:14px;margin-bottom:14px">
+      <div class="micro" style="margin-bottom:6px">Attached Redemption Notice &amp; Legal Authorization</div>
+      ${renderDocChip(doc)}
     </div>
 
     <label class="field"><span>Pay from</span>
@@ -1717,6 +1781,18 @@ document.addEventListener('click', e => {
   }
   else if (a === 'download-doc'){
     toast.success('Downloaded ' + (t.dataset.name || 'document'), 'Contract saved to local storage', 'download');
+  }
+  else if (a === 'preview-doc'){
+    let doc = null;
+    if (t.dataset.doc) {
+      try { doc = JSON.parse(decodeURIComponent(t.dataset.doc)); } catch (e) {}
+    } else if (t.dataset.id) {
+      const r = S.requests.find(x => x.id === t.dataset.id) || S.mintRequests.find(x => x.id === t.dataset.id);
+      if (r && r.documents && r.documents.length) doc = r.documents[0];
+    }
+    if (doc) {
+      openDocumentPreviewModal(doc, S, CTX);
+    }
   }
 
   else if (a === 'mint'){ mintOpen(t.dataset.key); }
