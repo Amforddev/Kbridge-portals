@@ -1,0 +1,435 @@
+import { ic, spinner, hash, uid, dstr, dshort, ago, inDays, nf, nav, pct, short, esc, TODAY } from './helpers.js';
+import { HEDERA_LOGO, HEDERA_MARK } from './assets.js';
+import { mintStatusBadge, pipelineStepper } from './capitalFlow.js';
+
+export function openRequestNotesModal(reqId, S, ctx) {
+  const r = S.mintRequests.find(x => x.id === reqId);
+  if (!r) return;
+  const p = ctx.PL(r.pf);
+
+  const body = `
+    <div style="margin-bottom:16px">
+      ${pipelineStepper(r.status)}
+    </div>
+
+    <div class="panel">
+      <div class="between">
+        <div>
+          <div class="micro">Capital Mint Request</div>
+          <div class="mono" style="font-size:15px;font-weight:600;margin-top:2px">${r.id}</div>
+          <div class="faint" style="font-size:11.5px">${esc(r.holder)} · ${ago(r.created)}</div>
+        </div>
+        <div class="t-right">
+          <div class="micro">Capital Allocation</div>
+          <div class="mono" style="font-size:16px;font-weight:600;margin-top:2px">${nf(r.amt, 2)} USDC</div>
+          <div class="faint mono" style="font-size:11px">Target: ${nf(r.tokens, 2)} ${p ? p.symbol : 'PUR'}</div>
+        </div>
+      </div>
+    </div>
+
+    <label class="field">
+      <span>Contract / Note Type Required</span>
+      <input class="input" id="reqNoteType" value="Senior Secured Promissory Note &amp; Invoice Purchase Agreement" />
+    </label>
+
+    <label class="field">
+      <span>Backing Invoice / Receivables Facility</span>
+      <select class="input" id="reqFacility">
+        <option value="INV-2026-8921">INV-2026-8921 — Acme Nuts &amp; Bolts Manufacturing ($100,000)</option>
+        <option value="INV-2026-9004">INV-2026-9004 — Vertex Robotics Inc. ($180,000)</option>
+        <option value="INV-2026-8922">INV-2026-8922 — Global Timber Exports Ltd. ($250,000)</option>
+        <option value="INV-2026-9011">INV-2026-9011 — Nexus Healthcare Inc. ($320,000)</option>
+      </select>
+    </label>
+
+    <label class="field">
+      <span>Instructions to Originating Party</span>
+      <textarea class="input" id="reqInstructions" rows="3" style="resize:vertical;font-size:13px">Please produce and sign the formal Promissory Note and Invoice Assignment Contract for ${nf(r.amt, 2)} USDC allocation. Upon upload, KBridge will verify the documents and execute the Hedera mint and transfer.</textarea>
+    </label>
+
+    <div class="callout c-neutral">
+      ${ic('info', 'icon-sm')}
+      <div>
+        Filing this formal request notifies the Originating Party to generate and upload the necessary legal contracts.
+      </div>
+    </div>
+  `;
+
+  const foot = `
+    <button class="btn btn-ghost" data-act="close">Cancel</button>
+    <button class="btn btn-primary" id="btnSendNoteReq">
+      ${ic('send', 'icon-sm')} Send Request to Originating Party
+    </button>
+  `;
+
+  ctx.openModal(ctx.modalShell('File Note Request', 'Step 2: Dispatch formal note request to Originator', 'fileText', body, foot));
+
+  const btn = document.getElementById('btnSendNoteReq');
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const noteType = document.getElementById('reqNoteType').value;
+      const facility = document.getElementById('reqFacility').value;
+      const inst = document.getElementById('reqInstructions').value;
+
+      r.status = 'Notes Requested';
+      r.notesRequestedAt = new Date(TODAY);
+      r.noteType = noteType;
+      r.instructions = inst;
+
+      ctx.closeModal();
+      ctx.render();
+      ctx.toast.success(
+        'Note request sent to Originating Party',
+        `Request ${r.id} is now awaiting contract upload.`,
+        'send'
+      );
+    });
+  }
+}
+
+export function openUploadNotesModal(reqId, S, ctx) {
+  const r = S.mintRequests.find(x => x.id === reqId);
+  if (!r) return;
+  const p = ctx.PL(r.pf);
+
+  let stagedDoc = {
+    name: `Promissory_Note_${r.id}_${(p?p.symbol:'PUR')}_Signed.pdf`,
+    size: '2.8 MB',
+    uploadedAt: new Date(TODAY),
+    hash: hash(),
+    signer: 'Pursuit Treasury & Legal Counsel',
+    facilityId: 'INV-2026-8921'
+  };
+
+  const body = `
+    <div style="margin-bottom:16px">
+      ${pipelineStepper(r.status)}
+    </div>
+
+    <div class="panel">
+      <div class="between">
+        <div>
+          <div class="micro">Capital Request</div>
+          <div class="mono" style="font-size:15px;font-weight:600;margin-top:2px">${r.id}</div>
+          <div class="faint" style="font-size:11.5px">${esc(r.holder)} · ${ago(r.created)}</div>
+        </div>
+        <div class="t-right">
+          <div class="micro">Capital Amount</div>
+          <div class="mono" style="font-size:16px;font-weight:600;margin-top:2px">${nf(r.amt, 2)} USDC</div>
+          <div class="faint mono" style="font-size:11px">Tokens: ${nf(r.tokens, 2)} ${p ? p.symbol : 'PUR'}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout c-amber" style="margin-bottom:16px">
+      ${ic('info', 'icon-sm')}
+      <div>
+        <b>KBridge Request:</b> ${esc(r.instructions || 'Upload the signed promissory notes and contract documents.')}
+      </div>
+    </div>
+
+    <label class="field">
+      <span>Contract &amp; Promissory Note Upload</span>
+      <div class="dropzone" id="contractDropzone">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+          <div style="width:40px;height:40px;border-radius:999px;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center">
+            ${ic('upload', 'icon-sm')}
+          </div>
+          <div style="font-weight:600;font-size:13.5px">Click or drag &amp; drop signed PDF contract notes</div>
+          <div class="faint" style="font-size:12px">Supports PDF, DOCX up to 25MB (Digital signatures supported)</div>
+        </div>
+        <input type="file" id="filePicker" accept=".pdf,.doc,.docx" style="display:none" />
+      </div>
+    </label>
+
+    <div id="docPreviewArea" style="margin-bottom:16px">
+      <div class="doc-chip">
+        <div class="d-info">
+          ${ic('fileText', 'icon-sm')}
+          <div>
+            <div class="d-name" id="docNameDisplay">${stagedDoc.name}</div>
+            <div class="d-size" id="docMetaDisplay">${stagedDoc.size} · SHA-256: ${short(stagedDoc.hash)}</div>
+          </div>
+        </div>
+        <span class="badge b-green">${ic('check', 'icon-xs')} Ready</span>
+      </div>
+    </div>
+
+    <div class="grid grid-2 gap12">
+      <label class="field">
+        <span>Backing Facility ID</span>
+        <input class="input mono" id="upFacility" value="INV-2026-8921" />
+      </label>
+      <label class="field">
+        <span>Authorized Signer</span>
+        <input class="input" id="upSigner" value="Pursuit Treasury &amp; Legal Counsel" />
+      </label>
+    </div>
+  `;
+
+  const foot = `
+    <button class="btn btn-ghost" data-act="close">Cancel</button>
+    <button class="btn btn-primary" id="btnSubmitOriginatorNotes">
+      ${ic('upload', 'icon-sm')} Submit Documents to KBridge
+    </button>
+  `;
+
+  ctx.openModal(ctx.modalShell('Upload Contract Notes', 'Step 3: Provide compliant legal notes for KBridge verification', 'upload', body, foot));
+
+  const dz = document.getElementById('contractDropzone');
+  const fp = document.getElementById('filePicker');
+  if (dz && fp) {
+    dz.addEventListener('click', () => fp.click());
+    fp.addEventListener('change', e => {
+      if (e.target.files && e.target.files[0]) {
+        const file = e.target.files[0];
+        stagedDoc.name = file.name;
+        stagedDoc.size = (file.size / (1024 * 1024)).toFixed(1) + ' MB';
+        stagedDoc.hash = hash();
+        document.getElementById('docNameDisplay').textContent = stagedDoc.name;
+        document.getElementById('docMetaDisplay').textContent = `${stagedDoc.size} · SHA-256: ${short(stagedDoc.hash)}`;
+        ctx.toast.info('File attached', file.name, 'fileText');
+      }
+    });
+  }
+
+  const btn = document.getElementById('btnSubmitOriginatorNotes');
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const fac = document.getElementById('upFacility').value;
+      const sig = document.getElementById('upSigner').value;
+      stagedDoc.facilityId = fac;
+      stagedDoc.signer = sig;
+
+      r.documents = [stagedDoc];
+      r.status = 'Documents Uploaded';
+
+      ctx.closeModal();
+      ctx.render();
+      ctx.toast.success(
+        'Documents submitted to KBridge',
+        `KBridge Admins will now inspect documents and trigger Hedera minting.`,
+        'check'
+      );
+    });
+  }
+}
+
+export function openInspectAndMintModal(reqId, S, ctx) {
+  const r = S.mintRequests.find(x => x.id === reqId);
+  if (!r) return;
+  const p = ctx.PL(r.pf);
+  const doc = r.documents[0] || {
+    name: 'Promissory_Note_PUR.pdf',
+    size: '2.5 MB',
+    hash: hash(),
+    signer: 'Originating Party Legal Officer',
+    facilityId: 'INV-2026-8921',
+    uploadedAt: new Date(TODAY)
+  };
+
+  const capWallet = ctx.wal(ctx.fundWallets('theoriq')[0]?.id) || { address: r.payFrom, usdc: 100000, label: 'Capital Partner Treasury' };
+  const origWallet = ctx.wal(ctx.fundWallets('pursuit')[0]?.id) || { address: r.destWallet, usdc: 0, label: 'Originator Partner Funding Wallet' };
+  const tokenCustody = ctx.tokenWallet() || { address: r.tokenCustody, bal: { pursuit: 0, meridian: 0, aster: 0 } };
+
+  const body = `
+    <div style="margin-bottom:16px">
+      ${pipelineStepper(r.status)}
+    </div>
+
+    <div class="card card-pad" style="background:#F8FAFC;border:1px solid #E2E8F0;margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-weight:600;font-size:13.5px;color:#0F172A">
+          ${ic('shield', 'icon-sm')} Document Verification &amp; Compliance Audit
+        </div>
+        <span class="badge b-green">${ic('check', 'icon-xs')} Verified</span>
+      </div>
+
+      <div class="doc-chip" style="margin-bottom:10px">
+        <div class="d-info">
+          ${ic('fileText', 'icon-sm')}
+          <div>
+            <div class="d-name">${doc.name}</div>
+            <div class="d-size">${doc.size} · Signed by ${esc(doc.signer)}</div>
+          </div>
+        </div>
+        <div class="mono faint" style="font-size:11px">${short(doc.hash)}</div>
+      </div>
+
+      <div class="grid grid-2 gap8 faint" style="font-size:12px">
+        <div>• Backing Facility: <b style="color:var(--ink)">${doc.facilityId || 'INV-2026-9004'}</b></div>
+        <div>• Jurisdiction: <b style="color:var(--ink)">Delaware SPV</b></div>
+        <div>• Recourse: <b style="color:var(--ink)">Full Recourse Senior Note</b></div>
+        <div>• Verification: <b style="color:var(--ok)">SHA-256 Checksum Match</b></div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:0.04em;margin-bottom:8px">
+        Hedera Settlement Execution Plan
+      </div>
+      <div class="kv">
+        <span class="k">1. Debit Capital Partner (Theoriq)</span>
+        <span class="v mono" style="color:var(--err)">-${nf(r.amt, 2)} USDC</span>
+      </div>
+      <div class="kv">
+        <span class="k">2. Credit Originating Party (Pursuit)</span>
+        <span class="v mono" style="color:var(--ok)">+${nf(r.amt, 2)} USDC</span>
+      </div>
+      <div class="kv">
+        <span class="k">3. Mint Tokens on Hedera Smart Contract</span>
+        <span class="v mono">+${nf(r.tokens, 2)} ${p ? p.symbol : 'PUR'}</span>
+      </div>
+      <div class="kv kv-total">
+        <span class="k" style="color:var(--ink);font-weight:500">4. Deliver Tokens into Theoriq Custody</span>
+        <span class="v mono" style="font-size:15px">${short(tokenCustody.address)}</span>
+      </div>
+    </div>
+
+    <div class="callout c-neutral">
+      ${ic('lock', 'icon-sm')}
+      <div>
+        Clicking <b>Mint &amp; Transfer Funds</b> executes the atomic transaction: transferring ${nf(r.amt, 2)} USDC to Pursuit's wallet and minting ${nf(r.tokens, 2)} ${p ? p.symbol : 'PUR'} tokens to Theoriq.
+      </div>
+    </div>
+  `;
+
+  const foot = `
+    <button class="btn btn-ghost" data-act="close">Cancel</button>
+    <button class="btn btn-primary" id="btnExecuteHederaMint">
+      ${ic('zap', 'icon-sm')} Mint Tokens &amp; Transfer Funds on Hedera
+    </button>
+  `;
+
+  ctx.openModal(ctx.modalShell('Inspect Documents &amp; Mint', 'Step 4: Atomic Hedera token mint and fund disbursement', 'shield', body, foot));
+
+  const btn = document.getElementById('btnExecuteHederaMint');
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const tx = hash();
+      const steps = [
+        { label: 'Auditing document signature & legal hash', meta: 'SHA-256 match confirmed', ms: 900 },
+        { 
+          label: `Transferring ${nf(r.amt, 2)} USDC from Theoriq to Pursuit`,
+          meta: `${short(capWallet.address)} → ${short(origWallet.address)}`,
+          ms: 1100,
+          fx: () => {
+            if (capWallet.usdc !== undefined) capWallet.usdc = Math.max(0, capWallet.usdc - r.amt);
+            if (origWallet.usdc !== undefined) origWallet.usdc += r.amt;
+          }
+        },
+        { 
+          label: `Minting ${nf(r.tokens, 2)} ${p ? p.symbol : 'PUR'} on Hedera`,
+          meta: `Hedera Token Service (HTS) 0.0.491204`,
+          ms: 1200,
+          fx: () => {
+            if (p) p.outstanding += r.tokens;
+            if (tokenCustody.bal && p) {
+              tokenCustody.bal[p.key] = (tokenCustody.bal[p.key] || 0) + r.tokens;
+            }
+            r.status = 'Completed';
+            r.mintedAt = new Date(TODAY);
+            r.tx = tx;
+
+            S.positions.unshift({
+              pf: p.key,
+              type: 'mint',
+              at: new Date(TODAY),
+              tokens: r.tokens,
+              nav: r.navAt,
+              usdc: r.amt,
+              tx
+            });
+
+            S.feed.unshift({
+              ic: 'coins',
+              tone: 'neutral',
+              text: `Capital Partner minted ${nf(r.tokens, 2)} ${p.symbol} backed by Note ${r.id}.`,
+              at: new Date(TODAY)
+            });
+          }
+        }
+      ];
+
+      ctx.openModal(ctx.modalShell('Executing Hedera Settlement', `${nf(r.amt, 2)} USDC → ${nf(r.tokens, 2)} ${p.symbol}`, 'zap', '<div class="steps"></div>', ''));
+      ctx.execSteps(steps, () => {
+        ctx.openModal(ctx.modalShell('Settlement Completed', 'Tokens minted & funds transferred on Hedera', 'check',
+          ctx.successBlock(`Capital Request ${r.id} Completed`, [
+            ['Platform', p ? p.name : 'Pursuit'],
+            ['Tokens Minted', `${nf(r.tokens, 2)} ${p ? p.symbol : 'PUR'}`],
+            ['USDC Transferred', `${nf(r.amt, 2)} USDC`],
+            ['Recipient Wallet', origWallet.label || 'Pursuit Originator Wallet'],
+            ['Token Custody', tokenCustody.label || 'Theoriq Custody']
+          ], tx),
+          `<button class="btn btn-primary" data-act="close">Done</button>`
+        ));
+        ctx.toast.success(
+          `Minted ${nf(r.tokens, 2)} ${p.symbol}`,
+          `${nf(r.amt, 2)} USDC transferred to Originating Party`,
+          'coins'
+        );
+      });
+    });
+  }
+}
+
+export function openRequestDetailsModal(reqId, S, ctx) {
+  const r = S.mintRequests.find(x => x.id === reqId);
+  if (!r) return;
+  const p = ctx.PL(r.pf);
+
+  const doc = r.documents[0];
+
+  const body = `
+    <div style="margin-bottom:16px">
+      ${pipelineStepper(r.status)}
+    </div>
+
+    <div class="panel">
+      <div class="between">
+        <div>
+          <div class="micro">Request ID</div>
+          <div class="mono" style="font-size:15px;font-weight:600;margin-top:2px">${r.id}</div>
+          <div class="faint" style="font-size:11.5px">${esc(r.holder)} · Created ${dstr(r.created)}</div>
+        </div>
+        <div class="t-right">
+          <div class="micro">Status</div>
+          <div style="margin-top:4px">${mintStatusBadge(r.status)}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:12px">
+      <div class="kv"><span class="k">Platform</span><span class="v">${p ? p.name : 'Receivables'}</span></div>
+      <div class="kv"><span class="k">Capital Amount</span><span class="v mono">${nf(r.amt, 2)} USDC</span></div>
+      <div class="kv"><span class="k">Tokens Minted</span><span class="v mono">${nf(r.tokens, 2)} ${p ? p.symbol : 'PUR'}</span></div>
+      <div class="kv"><span class="k">Token NAV at Mint</span><span class="v mono">${nav(r.navAt)}</span></div>
+      <div class="kv"><span class="k">Funding Wallet</span><span class="v mono">${short(r.payFrom)}</span></div>
+      <div class="kv"><span class="k">Originator Wallet</span><span class="v mono">${short(r.destWallet)}</span></div>
+      ${r.tx ? `<div class="kv"><span class="k">Hedera Tx Hash</span><span class="v mono" data-copy="${r.tx}" style="cursor:pointer">${short(r.tx)} ${ic('copy','icon-xs')}</span></div>` : ''}
+    </div>
+
+    ${doc ? `
+      <div style="margin-top:16px">
+        <div class="micro" style="margin-bottom:6px">Attached Notes &amp; Contracts</div>
+        <div class="doc-chip">
+          <div class="d-info">
+            ${ic('fileText', 'icon-sm')}
+            <div>
+              <div class="d-name">${doc.name}</div>
+              <div class="d-size">${doc.size} · Facility: ${doc.facilityId || 'INV-2026-8921'}</div>
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-sm" data-act="download-doc" data-name="${doc.name}">${ic('download', 'icon-xs')} Download</button>
+        </div>
+      </div>
+    ` : `
+      <div class="callout c-neutral" style="margin-top:16px">
+        ${ic('clock', 'icon-sm')}
+        <div>Notes not yet uploaded by the Originating Party.</div>
+      </div>
+    `}
+  `;
+
+  ctx.openModal(ctx.modalShell(`Request ${r.id}`, 'Capital Mint & Note Tracking', 'file', body, `<button class="btn btn-primary" data-act="close">Close</button>`));
+}

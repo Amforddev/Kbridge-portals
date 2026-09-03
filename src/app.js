@@ -1,4 +1,7 @@
-import { LOGO } from './assets.js';
+import { LOGO, PLATFORM_LOGOS, HEDERA_LOGO, HEDERA_MARK } from './assets.js';
+import { P, ic, spinner, TODAY, uid, hash, nf, usdc, tok, nav, pct, short, esc, dstr, dshort, ago, inDays, kLogo } from './helpers.js';
+import { INITIAL_MINT_REQUESTS, mintStatusBadge, pipelineStepper, viewAdminDashboard, viewCapitalPartnerRequests, viewOriginatorNoteRequests } from './capitalFlow.js';
+import { openRequestNotesModal, openUploadNotesModal, openInspectAndMintModal, openRequestDetailsModal } from './capitalModals.js';
 
 /* ============================================================
    KBridge — partner portal
@@ -6,105 +9,28 @@ import { LOGO } from './assets.js';
    daily token value and settle redemptions. State is in memory.
    ============================================================ */
 
-/* ---------- icons (lucide-style) ---------- */
-export const P = {
-  wallet:'M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h15a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5M16 12h.01',
-  coins:'M9 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12ZM13.3 6.7a6 6 0 1 1 0 10.6M6 18.7A6 6 0 0 0 15 21',
-  trend:'M22 7l-8.5 8.5-5-5L2 17M16 7h6v6',
-  layers:'M12 2 2 7l10 5 10-5-10-5ZM2 17l10 5 10-5M2 12l10 5 10-5',
-  lock:'M5 11h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2ZM7 11V7a5 5 0 0 1 10 0v4',
-  plus:'M12 5v14M5 12h14',
-  pencil:'M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z',
-  trash:'M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M10 11v6M14 11v6',
-  check:'M20 6 9 17l-5-5',
-  x:'M18 6 6 18M6 6l12 12',
-  right:'M5 12h14M12 5l7 7-7 7',
-  bell:'M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0',
-  out:'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9',
-  clock:'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 7v5l3 2',
-  shield:'M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1ZM9 12l2 2 4-4',
-  zap:'M13 2 3 14h9l-1 8 10-12h-9l1-8Z',
-  db:'M12 8c4.97 0 9-1.34 9-3s-4.03-3-9-3-9 1.34-9 3 4.03 3 9 3ZM3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3',
-  activity:'M22 12h-4l-3 9L9 3l-3 9H2',
-  chev:'m9 18 6-6-6-6',
-  chevd:'m6 9 6 6 6-6',
-  back:'M19 12H5M12 19l-7-7 7-7',
-  grid:'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
-  refresh:'M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5',
-  file:'M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7ZM14 2v6h6M9 13h6M9 17h6',
-  upright:'M7 17 17 7M7 7h10v10',
-  flame:'M12 22c4 0 7-2.6 7-7 0-4-3-6-4-9-2 2-3 3-4 3s-1-2-1-4c-2 1-5 4-5 10 0 4.4 3 7 7 7Z',
-  upload:'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12',
-  users:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
-  info:'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 16v-4M12 8h.01',
-  alert:'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 8v4M12 16h.01',
-  copy:'M8 4h10a2 2 0 0 1 2 2v10M16 8H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2Z',
-  bank:'M3 21h18M4 10h16M5 21V10M19 21V10M9 21V10M15 21V10M12 2 3 7h18Z',
-  menu:'M4 6h16M4 12h16M4 18h16',
-  send:'m22 2-7 20-4-9-9-4Z',
-  arrowdown:'M12 5v14M19 12l-7 7-7-7',
-  gauge:'M12 14 8.5 9.5M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z',
-  sparkle:'M12 3 13.9 8.1 19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9ZM19 17l.8 2.2L22 20l-2.2.8L19 23l-.8-2.2L16 20l2.2-.8Z',
-  hourglass:'M6 2h12M6 22h12M8 2v4a4 4 0 0 0 4 4 4 4 0 0 0 4-4V2M8 22v-4a4 4 0 0 1 4-4 4 4 0 0 1 4 4v4'
-};
-export function ic(n, cls){ return '<svg class="icon '+(cls||'')+'" viewBox="0 0 24 24" aria-hidden="true"><path d="'+P[n]+'"/></svg>'; }
-
-export const WORD_SCALE = { theoriq:1.15, pursuit:1.15 };
+export const WORD_SCALE = { theoriq:1, pursuit:1 };
 export function orgWord(k, h){
-  const hh = Math.round((h||32) * (WORD_SCALE[k]||1));
-  if (LOGO[k] && LOGO[k].word) {
-    return '<img class="brand-word" src="'+LOGO[k].word+'" alt="'+(ORGS[k]?ORGS[k].name:k)+'" referrerpolicy="no-referrer" style="height:'+hh+'px;max-height:100%;max-width:240px;object-fit:contain;display:block">';
-  }
-  return '<span style="font-size:'+hh+'px;font-weight:600">'+(ORGS[k]? ORGS[k].name : k)+'</span>';
+  const hh = h || 20;
+  return '<span style="font-size:'+hh+'px;font-weight:600;letter-spacing:-0.02em">'+(ORGS[k]? ORGS[k].name : k)+'</span>';
 }
 export function orgMark(k, s){
-  s = s || 40;
-  if (LOGO[k] && LOGO[k].icon) {
-    return '<span class="brand-mark" style="width:'+s+'px;height:'+s+'px;border-radius:'+Math.round(s/3.4)+'px;overflow:hidden;flex:none;display:inline-flex;align-items:center;justify-content:center;background:#fff;padding:3px;border:1px solid var(--line-soft)"><img src="'+LOGO[k].icon+'" alt="'+(ORGS[k]?ORGS[k].name:k)+'" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:contain;display:block"></span>';
-  }
   return '';
-}
-export function kLogo(sz){
-  const s = sz || 32;
-  return '<div class="klogo" style="width:'+s+'px;height:'+s+'px;font-size:'+Math.round(s*0.62)+'px">K</div>';
 }
 
 /* ---------- orgs ---------- */
 export const ORGS = {
-  theoriq:{ key:'theoriq', name:'Theoriq', legal:'Theoriq Capital Management', role:'capital',
+  theoriq:{ key:'theoriq', name:'Capital Partner', legal:'Capital Partner SPV', role:'capital',
     tag:'Capital Partner', side:'Demand side · brings USDC', color:'#141413', soft:'#F3F3F0', line:'#E4E4E0',
-    email:'treasury@theoriq.xyz', blurb:'Deploy treasury USDC into receivables platforms and follow what your tokens are worth.' },
-  pursuit:{ key:'pursuit', name:'Pursuit', legal:'Pursuit Receivables SPV I', role:'supply',
-    tag:'Receivables Partner', side:'Supply side · brings invoices', color:'#57534E', soft:'#F5F5F3', line:'#E4E4E0',
-    email:'ops@pursuit.finance', blurb:'Raise capital against tokenised invoices, publish the daily token value and settle redemptions.' }
+    email:'treasury@capitalpartner.com', blurb:'Deploy treasury USDC into receivables platforms and follow what your tokens are worth.' },
+  pursuit:{ key:'pursuit', name:'Originating Party', legal:'Originating Party SPV I', role:'supply',
+    tag:'Originating Party', side:'Supply side · brings invoices', color:'#57534E', soft:'#F5F5F3', line:'#E4E4E0',
+    email:'ops@originator.finance', blurb:'Raise capital against tokenised invoices, publish the daily token value and settle redemptions.' },
+  kbridge:{ key:'kbridge', name:'KBridge Admin', legal:'KBridge Protocol Governance', role:'admin',
+    tag:'KBridge Admin', side:'Development Team & Protocol Admins', color:'#0F172A', soft:'#F1F5F9', line:'#CBD5E1',
+    email:'admin@kbridge.io', blurb:'Coordinate capital requests, file formal note requests with originating parties, audit contracts, and mint on Hedera.' }
 };
 
-/* ---------- helpers ---------- */
-export const TODAY = new Date(2026, 7, 27, 9, 0, 0);
-export const uid = p => p + '-' + Math.random().toString(36).slice(2, 8).toUpperCase();
-export const hash = () => '0x' + Array.from({length:64}, () => Math.floor(Math.random()*16).toString(16)).join('');
-export const nf = (n, d) => Number(n||0).toLocaleString('en-US', {minimumFractionDigits:d===undefined?2:d, maximumFractionDigits:d===undefined?2:d});
-export const usdc = n => nf(n, 2) + ' USDC';
-export const tok = n => nf(n, 2) + ' KBT';
-export const nav = n => '$' + Number(n).toFixed(4);
-export const pct = n => (n>=0?'+':'') + n.toFixed(2) + '%';
-export const short = a => a.slice(0,6) + '…' + a.slice(-4);
-export const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-export const dstr = d => d.toLocaleDateString('en-US',{month:'short', day:'numeric', year:'numeric'});
-export const dshort = d => d.toLocaleDateString('en-US',{month:'short', day:'numeric'});
-export function ago(d){
-  const m = Math.round((TODAY - d)/60000);
-  if (m < 1) return 'just now';
-  if (m < 60) return m + 'm ago';
-  const h = Math.round(m/60); if (h < 24) return h + 'h ago';
-  const dd = Math.round(h/24); return dd + (dd===1?' day ago':' days ago');
-}
-export function inDays(d){
-  const dd = Math.ceil((d - TODAY)/86400000);
-  if (dd < 0) return 'expired';
-  if (dd === 0) return 'today';
-  return 'in ' + dd + (dd===1?' day':' days');
-}
 export function addr(){ return '0x' + Array.from({length:40}, () => Math.floor(Math.random()*16).toString(16)).join(''); }
 
 /* ---------- data ---------- */
@@ -123,7 +49,9 @@ export const S = {
   org: null,
   view: 'dash',
   openPlatform: 'pursuit',
+  adminHidden: false,
   toasts: [],
+  mintRequests: JSON.parse(JSON.stringify(INITIAL_MINT_REQUESTS)),
 
   platforms: [
     { key:'pursuit', name:'Pursuit', legal:'Pursuit Receivables SPV I', symbol:'PUR',
@@ -158,25 +86,25 @@ export const S = {
   ],
 
   wallets: [
-    { id:'w-t1', org:'theoriq', kind:'funds',  label:'Theoriq Treasury', address:'0x8f3ad2b91c4e77a0d5be612f9a3c8471e0d92b64', network:'Base', usdc:100000, primary:true },
-    { id:'w-t2', org:'theoriq', kind:'funds',  label:'Theoriq Ops Reserve', address:'0x22c9f4e81a07d3b6c25ef90ba14d7736e8c01f52', network:'Base', usdc:45000 },
-    { id:'w-t3', org:'theoriq', kind:'tokens', label:'Theoriq Token Custody', address:'0xa10b73ce55f2419d8ab6c0e73f81d2495ba7c318', network:'Base',
+    { id:'w-t1', org:'theoriq', kind:'funds',  label:'Capital Partner Treasury', address:'0x8f3ad2b91c4e77a0d5be612f9a3c8471e0d92b64', network:'Hedera', usdc:100000, primary:true },
+    { id:'w-t2', org:'theoriq', kind:'funds',  label:'Capital Partner Reserve', address:'0x22c9f4e81a07d3b6c25ef90ba14d7736e8c01f52', network:'Hedera', usdc:45000 },
+    { id:'w-t3', org:'theoriq', kind:'tokens', label:'Capital Partner Token Custody', address:'0xa10b73ce55f2419d8ab6c0e73f81d2495ba7c318', network:'Hedera',
       bal:{ pursuit:0, meridian:0, aster:0 }, lock:{ pursuit:0, meridian:0, aster:0 }, immutable:true },
-    { id:'w-p1', org:'pursuit', kind:'funds',  label:'Pursuit Funding Wallet', address:'0x5d71ac09e4b83f26d1c7590ae4bb3f8021d64c7a', network:'Base', usdc:0, primary:true },
-    { id:'w-p2', org:'pursuit', kind:'funds',  label:'Pursuit Settlement Reserve', address:'0x9b48c7e0135da62f9c84be71a0d35f2647ce9810', network:'Base', usdc:500000 }
+    { id:'w-p1', org:'pursuit', kind:'funds',  label:'Originator Partner Funding Wallet', address:'0x5d71ac09e4b83f26d1c7590ae4bb3f8021d64c7a', network:'Hedera', usdc:0, primary:true },
+    { id:'w-p2', org:'pursuit', kind:'funds',  label:'Originator Partner Settlement Reserve', address:'0x9b48c7e0135da62f9c84be71a0d35f2647ce9810', network:'Hedera', usdc:500000 }
   ],
 
   escrow: { usdc:0, tokens:0 },
 
   requests: [
-    { id:'RDM-0042', pf:'pursuit', holder:'Meridian Digital Fund', holderKey:'other', tokens:120000, navAt:1.0388,
-      payTo:'0x71c3f0a8e2946b5d3a91cc0e88b47f2d5a9b3a9b',
+    { id:'RDM-0042', pf:'pursuit', holder:'Theoriq', holderKey:'theoriq', tokens:120000, navAt:1.0388,
+      payTo:'0x8f3a2b64c1e0d9a8f27c89b0a1d4e789f2a02b64',
       created:new Date(TODAY.getTime()-2*86400000), lockUntil:new Date(TODAY.getTime()+1*86400000), status:'Pending' },
-    { id:'RDM-0041', pf:'pursuit', holder:'Aster Capital Partners', holderKey:'other', tokens:65000, navAt:1.0371,
-      payTo:'0x1a4be88c7702d5f39ba0e41c6d8397f24a0be88c',
+    { id:'RDM-0041', pf:'pursuit', holder:'Theoriq', holderKey:'theoriq', tokens:65000, navAt:1.0371,
+      payTo:'0x8f3a2b64c1e0d9a8f27c89b0a1d4e789f2a02b64',
       created:new Date(TODAY.getTime()-3*86400000), lockUntil:new Date(TODAY.getTime()+2*86400000), status:'Pending' },
-    { id:'RDM-0039', pf:'pursuit', holder:'Meridian Digital Fund', holderKey:'other', tokens:40000, navAt:1.0342,
-      payTo:'0x71c3f0a8e2946b5d3a91cc0e88b47f2d5a9b3a9b',
+    { id:'RDM-0039', pf:'pursuit', holder:'Theoriq', holderKey:'theoriq', tokens:40000, navAt:1.0342,
+      payTo:'0x8f3a2b64c1e0d9a8f27c89b0a1d4e789f2a02b64',
       created:new Date(TODAY.getTime()-9*86400000), lockUntil:new Date(TODAY.getTime()-5*86400000),
       status:'Settled', paid:41368, settledAt:new Date(TODAY.getTime()-7*86400000) }
   ],
@@ -218,22 +146,22 @@ export const pfRequests = k => S.requests.filter(r => r.pf === k);
   const h = p.history, n = h.length;
   const cur = h[n-1].v, d1 = h[n-2].v, d2 = h[n-3].v, d4 = h[n-5].v;
   S.navPublishes = [
-    { pf:'pursuit', at:new Date(TODAY.getTime()-16*3600000), value:cur, pool:cur*p.outstanding, by:'Pursuit Ops' },
-    { pf:'pursuit', at:new Date(TODAY.getTime()-40*3600000), value:d1,  pool:d1*p.outstanding,  by:'Pursuit Ops' },
-    { pf:'pursuit', at:new Date(TODAY.getTime()-64*3600000), value:d2,  pool:d2*p.outstanding,  by:'Pursuit Ops' }
+    { pf:'pursuit', at:new Date(TODAY.getTime()-16*3600000), value:cur, pool:cur*p.outstanding, by:'Originating Party' },
+    { pf:'pursuit', at:new Date(TODAY.getTime()-40*3600000), value:d1,  pool:d1*p.outstanding,  by:'Originating Party' },
+    { pf:'pursuit', at:new Date(TODAY.getTime()-64*3600000), value:d2,  pool:d2*p.outstanding,  by:'Originating Party' }
   ];
   S.requests[0].navAt = d1; S.requests[1].navAt = d2; S.requests[2].navAt = d4;
   S.requests[2].paid = +(S.requests[2].tokens * d4).toFixed(2);
 
   S.feed = [
-    { ic:'coins', tone:'neutral', text:'Meridian Digital Fund minted 300,000.00 PUR on Pursuit.', at:new Date(TODAY.getTime()-6*3600000) },
-    { ic:'trend', tone:'green',   text:'Pursuit published a token value of '+nav(cur)+' ('+pct((cur/d1-1)*100)+' vs. prior day).', at:new Date(TODAY.getTime()-16*3600000) },
+    { ic:'coins', tone:'neutral', text:'Capital partner minted 300,000.00 PUR.', at:new Date(TODAY.getTime()-6*3600000) },
+    { ic:'trend', tone:'green',   text:'Originating party published a token value of '+nav(cur)+' ('+pct((cur/d1-1)*100)+' vs. prior day).', at:new Date(TODAY.getTime()-16*3600000) },
     { ic:'trend', tone:'green',   text:'Meridian Trade Finance published a token value of '+nav(navOf(m))+'.', at:new Date(TODAY.getTime()-19*3600000) },
-    { ic:'file',  tone:'gray',    text:'Facility INV-2026-9017 matured and settled into the Pursuit pool.', at:new Date(TODAY.getTime()-26*3600000) },
-    { ic:'flame', tone:'amber',   text:'Redemption RDM-0039 honoured — 40,000.00 PUR burned.', at:new Date(TODAY.getTime()-7*86400000) }
+    { ic:'file',  tone:'gray',    text:'Facility INV-2026-9017 matured and settled into the pool.', at:new Date(TODAY.getTime()-26*3600000) },
+    { ic:'flame', tone:'amber',   text:'Redemption RDM-0039 settled — 40,000.00 PUR burned.', at:new Date(TODAY.getTime()-7*86400000) }
   ];
   S.notifications = [
-    { text:'Pursuit published a new token value: '+nav(cur)+'.', at:'16h ago', unread:true },
+    { text:'Originating party published a new token value: '+nav(cur)+'.', at:'16h ago', unread:true },
     { text:'Redemption RDM-0042 is awaiting settlement.', at:'2 days ago', unread:true },
     { text:'Aster Working Capital opens to capital partners on '+dstr(PL('aster').opened)+'.', at:'4 days ago', unread:false }
   ];
@@ -421,41 +349,70 @@ export function gateScreen(){
   const card = k => {
     const o = ORGS[k];
     return `<button class="gate-card" data-act="pick" data-org="${k}">
-      <div class="between" style="align-items:center;min-height:56px">
-        ${orgWord(k, 42)}
-        <span class="gate-role">${o.tag}</span>
+      <div class="between" style="align-items:center;min-height:38px">
+        <span class="partner-pill">${o.tag}</span>
+        <span class="gate-arrow">${ic('right','icon-sm')}</span>
       </div>
-      <div style="font-size:12.5px;color:var(--faint);margin-top:18px">${o.legal}</div>
-      <p style="font-size:13.5px;color:var(--muted);margin-top:12px;line-height:1.55">${o.blurb}</p>
+      <div style="font-size:12.5px;color:var(--faint);margin-top:14px">${o.side}</div>
+      <p style="font-size:13.5px;color:var(--muted);margin-top:10px;line-height:1.55">${o.blurb}</p>
       <div class="row gap6" style="margin-top:20px;font-size:13.5px;font-weight:500">
         Sign in ${ic('right','icon-sm')}
       </div>
     </button>`;
   };
-  return `<div class="center-screen fadein">
+
+  const adminPendingCount = (S.mintRequests || []).filter(r => r.status === 'Pending Admin Review' || r.status === 'Documents Uploaded').length;
+
+  return `<div class="center-screen fadein" style="position:relative">
+    <div class="top-right-admin-bar">
+      ${!S.adminHidden ? `
+        <button class="kbridge-admin-pill" data-act="login-admin" title="Sign in as KBridge Admin">
+          <span>KBridge Admin</span>
+          <span class="pill-circle-arrow">${ic('right','icon-xs')}</span>
+          ${adminPendingCount > 0 ? `<span class="badge b-amber" style="padding:1px 6px;font-size:10px;margin-left:2px">${adminPendingCount}</span>` : ''}
+        </button>` : ''}
+      <button class="eye-toggle-btn" data-act="toggle-admin" title="${S.adminHidden ? 'Unhide KBridge Admin button' : 'Hide KBridge Admin button'}" aria-label="Toggle Admin Visibility">
+        ${ic(S.adminHidden ? 'eyeOff' : 'eye', 'icon-sm')}
+        ${S.adminHidden ? '<span style="font-size:12px;font-weight:500;color:var(--muted)">Admin</span>' : ''}
+      </button>
+    </div>
+
     <div class="brandline" style="margin-bottom:8px">${kLogo(36)}<span class="name" style="font-size:22px">kbridge</span></div>
     <h1 style="font-size:26px;font-weight:600;letter-spacing:-.02em;margin-top:16px">Partner sign in</h1>
     <p class="muted" style="font-size:14px;margin-top:6px;text-align:center;max-width:520px">
       KBridge connects capital partners with the platforms that originate receivables.</p>
-    <div class="gate-grid">${card('theoriq')}${card('pursuit')}</div>
+    <div class="gate-grid" style="max-width:720px">${card('theoriq')}${card('pursuit')}</div>
   </div>`;
 }
 
 /* ---------- 2. branded login ---------- */
 export function loginScreen(k){
   const o = ORGS[k];
-  return `<div class="center-screen fadein">
+  const adminPendingCount = (S.mintRequests || []).filter(r => r.status === 'Pending Admin Review' || r.status === 'Documents Uploaded').length;
+
+  return `<div class="center-screen fadein" style="position:relative">
+    <div class="top-right-admin-bar">
+      ${!S.adminHidden ? `
+        <button class="kbridge-admin-pill" data-act="login-admin" title="Sign in as KBridge Admin">
+          <span>KBridge Admin</span>
+          <span class="pill-circle-arrow">${ic('right','icon-xs')}</span>
+          ${adminPendingCount > 0 ? `<span class="badge b-amber" style="padding:1px 6px;font-size:10px;margin-left:2px">${adminPendingCount}</span>` : ''}
+        </button>` : ''}
+      <button class="eye-toggle-btn" data-act="toggle-admin" title="${S.adminHidden ? 'Unhide KBridge Admin button' : 'Hide KBridge Admin button'}" aria-label="Toggle Admin Visibility">
+        ${ic(S.adminHidden ? 'eyeOff' : 'eye', 'icon-sm')}
+        ${S.adminHidden ? '<span style="font-size:12px;font-weight:500;color:var(--muted)">Admin</span>' : ''}
+      </button>
+    </div>
+
     <div class="login-card">
       <div class="cobrand">
         ${kLogo(34)}<span style="font-size:19px;font-weight:500;letter-spacing:-.02em">kbridge</span>
-        <span class="x" style="height:30px"></span>
-        ${orgWord(k, 36)}
       </div>
       <div class="card" style="border-radius:var(--r-xl);overflow:hidden">
         <div style="padding:30px 28px 26px">
           <div style="text-align:center;margin-bottom:22px">
-            <h2 style="font-size:19px;font-weight:600;letter-spacing:-.02em">Sign in to ${o.name}</h2>
-            <p class="muted" style="font-size:13px;margin-top:6px">${o.tag}</p>
+            <h2 style="font-size:19px;font-weight:600;letter-spacing:-.02em">Sign in as ${o.tag}</h2>
+            <p class="muted" style="font-size:13px;margin-top:6px">${o.side}</p>
           </div>
           <div id="loginForm" class="stack gap16">
             <label class="field"><span>Work email</span>
@@ -480,26 +437,40 @@ export function loginScreen(k){
 
 /* ---------- 3. shell ---------- */
 export function navItems(){
+  if (S.org === 'kbridge') {
+    return [['dash','Admin Pipeline'],['redemptions','Redemptions'],['wallets','Wallets']];
+  }
   return S.org === 'theoriq'
-    ? [['dash','Dashboard'],['platforms','Platforms'],['wallets','Wallets']]
-    : [['dash','Dashboard'],['redemptions','Redemptions'],['wallets','Wallets']];
+    ? [['dash','Dashboard'],['platforms','Platforms'],['requests','Capital Requests'],['wallets','Wallets']]
+    : [['dash','Dashboard'],['requests','Note Requests'],['redemptions','Redemptions'],['wallets','Wallets']];
 }
+
 export function header(){
   const tabs = () => navItems().map(([k,l]) =>
     `<button class="${(S.view===k || (k==='platforms' && S.view==='platform'))?'on':''}" data-act="view" data-view="${k}">${l}</button>`).join('');
+
+  const adminPendingCount = (S.mintRequests || []).filter(r => r.status === 'Pending Admin Review' || r.status === 'Documents Uploaded').length;
+
   return `<header class="app"><div class="wrap">
     <div class="hbar">
       <div class="row">
         <div class="brandline" style="cursor:pointer" data-act="view" data-view="dash">
-          ${kLogo(30)}<span class="name" style="border-right:1px solid var(--line);padding-right:16px">kbridge</span>
+          ${kLogo(30)}<span class="name">kbridge</span>
         </div>
-        <div class="row gap10" style="margin-left:16px">
-          <span class="org-mark-only">${orgMark(S.org, 28)}</span>
-          <span class="org-name">${orgWord(S.org, 24)}</span>
-        </div>
-        <nav class="nav">${tabs()}</nav>
+        <nav class="nav" style="margin-left:24px">${tabs()}</nav>
       </div>
-      <div class="row gap12">
+      <div class="row gap12" style="align-items:center">
+        ${S.org !== 'kbridge' ? `
+          ${!S.adminHidden ? `
+            <button class="kbridge-admin-pill" data-act="switch-role" data-org="kbridge" title="Switch to KBridge Admin Console">
+              <span>KBridge Admin</span>
+              <span class="pill-circle-arrow">${ic('right','icon-xs')}</span>
+              ${adminPendingCount > 0 ? `<span class="badge b-amber" style="padding:1px 6px;font-size:10px;margin-left:2px">${adminPendingCount}</span>` : ''}
+            </button>` : ''}
+          <button class="eye-toggle-btn" data-act="toggle-admin" title="${S.adminHidden ? 'Unhide KBridge Admin button' : 'Hide KBridge Admin button'}" aria-label="Toggle Admin Visibility">
+            ${ic(S.adminHidden ? 'eyeOff' : 'eye', 'icon-sm')}
+            ${S.adminHidden ? '<span style="font-size:11.5px;font-weight:500;color:var(--muted);margin-left:2px">Admin</span>' : ''}
+          </button>` : ''}
         <button class="bell" data-act="notif">${ic('bell')}<span class="pip"></span></button>
         <button class="wallet-chip" data-act="acct">
           <span class="mono chip-bal" style="font-size:13px;font-weight:500">${nf(orgCash(S.org),0)}<span class="faint" style="font-size:11px;margin-left:4px">USDC</span></span>
@@ -541,10 +512,10 @@ export function balancesCard(){
   const tokenLines = S.platforms.filter(p => heldOf(p.key)+lockedOf(p.key) > 0)
     .map(p => nf(heldOf(p.key)+lockedOf(p.key),2)+' '+p.symbol).join('<br>') || '0.00';
   const rows = [
-    ['Theoriq · wallet of funds', fundWallets('theoriq').length+' registered', nf(orgCash('theoriq'),2)+' USDC'],
-    ['Theoriq · wallet of tokens', 'pre-configured, not editable', tokenLines],
+    ['Capital Partner · wallet of funds', fundWallets('theoriq').length+' registered', nf(orgCash('theoriq'),2)+' USDC'],
+    ['Capital Partner · wallet of tokens', 'pre-configured, not editable', tokenLines],
     ['KBridge · settlement wallet', 'transit only', nf(S.escrow.usdc,2)+' USDC | '+nf(S.escrow.tokens,2)+' tokens'],
-    ['Pursuit · wallet of funds', fundWallets('pursuit').length+' registered', nf(orgCash('pursuit'),2)+' USDC']
+    ['Originating Party · wallet of funds', fundWallets('pursuit').length+' registered', nf(orgCash('pursuit'),2)+' USDC']
   ];
   return `<div class="card">
     <div class="card-head"><h3>${ic('db','icon-sm')} Wallet balances</h3></div>
@@ -619,88 +590,75 @@ export function viewDashCapital(){
   const value = positionValue(), cost = totalCost(), gain = value - cost;
   const invested = investedPlatforms();
   const pend = myRequests().filter(r => r.status === 'Pending');
-  const tokensTotal = S.platforms.reduce((a,p) => a + heldOf(p.key) + lockedOf(p.key), 0);
 
   const alert = pend.length
     ? banner('amber','hourglass',
-        `<b>${pend.length} redemption request${pend.length>1?'s':''} waiting to be settled.</b> ${nf(pend.reduce((a,r)=>a+r.tokens,0),2)} tokens are locked until then.`, '')
-    : (invested.length === 0
-        ? banner('neutral','info','<b>No holdings yet.</b> Choose a platform and mint your first tokens.',
-            `<button class="btn btn-primary btn-sm" data-act="view" data-view="platforms">Browse platforms</button>`)
-        : '');
+        `<b>${pend.length} redemption request${pend.length>1?'s':''} pending settlement.</b> ${nf(pend.reduce((a,r)=>a+r.tokens,0),2)} tokens locked.`, '')
+    : '';
 
   const holdings = invested.length ? invested.map(p => {
     const t = heldOf(p.key) + lockedOf(p.key), v = t * navOf(p), c = costOf(p.key), g = v - c;
-    return `<button class="wrow" style="width:100%;text-align:left" data-act="platform" data-key="${p.key}">
-      <div class="row gap12">
-        ${platformMark(p, 40)}
-        <div><div style="font-size:14px;font-weight:600">${p.name}</div>
+    return `<div class="wrow" style="width:100%;align-items:center">
+      <div class="row gap12" style="align-items:center">
+        ${platformMark(p, 42)}
+        <div><div style="font-size:15px;font-weight:600">${p.name}</div>
           <div class="addr">${nf(t,2)} ${p.symbol} · ${nav(navOf(p))} per token</div></div>
       </div>
-      <div class="row gap16">
-        <div class="t-right"><div class="mono" style="font-size:14px;font-weight:500">${nf(v,2)} USDC</div>
-          <div class="mono ${g>=0?'pos':'neg'}" style="font-size:11.5px">${(g>=0?'+':'')+nf(g,2)} ${c?'('+pct(g/c*100)+')':''}</div></div>
-        <span style="color:var(--faint)">${ic('right','icon-sm')}</span>
-      </div></button>`;
-  }).join('') : `<div style="padding:40px;text-align:center" class="muted">
+      <div class="row gap16" style="align-items:center">
+        <div class="t-right"><div class="mono" style="font-size:15px;font-weight:600">${nf(v,2)} USDC</div>
+          <div class="mono ${g>=0?'pos':'neg'}" style="font-size:12px">${(g>=0?'+':'')+nf(g,2)} ${c?'('+pct(g/c*100)+')':''}</div></div>
+        <div class="row gap8">
+          <button class="btn btn-ghost btn-sm" data-act="platform" data-key="${p.key}">View</button>
+          <button class="btn btn-primary btn-sm" data-act="mint" data-key="${p.key}">Mint</button>
+        </div>
+      </div></div>`;
+  }).join('') : `<div style="padding:48px;text-align:center" class="muted">
       You don’t hold tokens on any platform yet.<br>
-      <button class="btn btn-ghost btn-sm" style="margin-top:14px" data-act="view" data-view="platforms">See what’s available ${ic('right','icon-sm')}</button>
+      <button class="btn btn-primary btn-sm" style="margin-top:16px" data-act="view" data-view="platforms">Browse platforms ${ic('right','icon-sm')}</button>
     </div>`;
 
-  return `${pageHead('Dashboard', 'Theoriq Capital Management', '')}
+  return `${pageHead('Dashboard', 'Capital Partner',
+    `<button class="btn btn-primary" data-act="view" data-view="platforms">${ic('coins','icon-sm')} Browse &amp; Mint</button>`)}
   ${alert}
 
-  <div class="stats">
-    ${stat('Cash available','wallet', nf(cash,0)+' <span style="font-size:15px;color:var(--muted)" class="mono">USDC</span>', 'Across '+fundWallets('theoriq').length+' fund wallets')}
-    ${stat('Platforms','layers', String(invested.length), invested.length? invested.map(p=>p.name).join(' · ') : 'None yet')}
+  <div class="stats" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+    ${stat('Cash available','wallet', nf(cash,0)+' <span style="font-size:15px;color:var(--muted)" class="mono">USDC</span>', 'Across fund wallets')}
     ${stat('Portfolio value','layers', nf(value,2)+' <span style="font-size:15px;color:var(--muted)" class="mono">USDC</span>', cost? 'Cost '+nf(cost,2)+' USDC' : '—')}
-    ${stat('Gain','trend', (gain>=0?'+':'')+nf(gain,2), cost? pct(gain/cost*100)+' on cost' : 'No holdings yet', gain>0?'pos':'')}
+    ${stat('Net gain','trend', (gain>=0?'+':'')+nf(gain,2), cost? pct(gain/cost*100)+' on cost' : '—', gain>0?'pos':'')}
   </div>
 
-  <div class="cols cols-2-1">
-    <div class="stack" style="gap:20px">
-      <div class="card">
-        <div class="card-head"><h3>${ic('layers','icon-sm')} Your holdings</h3>
-          <button class="btn btn-quiet btn-sm" data-act="view" data-view="platforms">All platforms ${ic('right','icon-sm')}</button></div>
-        <div>${holdings}</div>
+  <div class="stack" style="gap:24px">
+    <div class="card">
+      <div class="card-head">
+        <h3>${ic('layers','icon-sm')} Your holdings</h3>
+        <button class="btn btn-quiet btn-sm" data-act="view" data-view="platforms">All platforms ${ic('right','icon-sm')}</button>
       </div>
-      <div class="card">
-        <div class="card-head"><h3>${ic('hourglass','icon-sm')} Redemption requests</h3></div>
-        <div class="table-scroll"><table>
-          <thead><tr><th>Request</th><th>Platform</th><th class="t-right">Tokens</th><th class="t-right">Value (USDC)</th>
-            <th>Submitted</th><th>Status</th><th></th></tr></thead>
-          <tbody>${requestRows(myRequests().slice(0,5), {cols:7, empty:'No redemption requests yet.'})}</tbody></table></div>
+      <div>${holdings}</div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h3>${ic('hourglass','icon-sm')} Redemption requests</h3>
       </div>
-      ${activityCard(5)}
+      <div class="table-scroll"><table>
+        <thead><tr><th>Request</th><th>Platform</th><th class="t-right">Tokens</th><th class="t-right">Value (USDC)</th>
+          <th>Submitted</th><th>Status</th><th></th></tr></thead>
+        <tbody>${requestRows(myRequests().slice(0,5), {cols:7, empty:'No redemption requests yet.'})}</tbody></table></div>
     </div>
-    <div class="stack" style="gap:20px">
-      ${balancesCard()}
-      ${quickActions([
-        ['view','Browse platforms','See every platform on KBridge',false,'data-view="platforms"'],
-        ['mint','Mint tokens','Turn USDC into platform tokens',false],
-        ['redeem','Request redemption','Burn tokens back into USDC', tokensTotal<=0],
-        ['wallet-add','Add a wallet','Register a send / receive address',false]
-      ])}
-    </div>
+
+    ${viewCapitalPartnerRequests(S, CTX)}
   </div>`;
 }
 
 /* ---------- 5. platforms list ---------- */
 export function platformMark(p, size){
-  const s = size || 44;
+  const s = size || 40;
   const rad = Math.round(s / 3.4);
   const box = `width:${s}px;height:${s}px;border-radius:${rad}px;flex:none;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;background:#fff;border:1px solid var(--line-soft);box-shadow:0 1px 3px rgba(0,0,0,0.06);`;
-  if (LOGO[p.key] && LOGO[p.key].icon) {
-    return `<span class="brand-mark" style="${box}">
-      <img src="${LOGO[p.key].icon}" alt="${p.name}" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover;display:block"></span>`;
+  if (PLATFORM_LOGOS && PLATFORM_LOGOS[p.key]) {
+    return `<span class="brand-mark" style="${box}">${PLATFORM_LOGOS[p.key]}</span>`;
   }
-  return `<span class="brand-mark" style="${box}">
-    <svg viewBox="0 0 64 64" width="100%" height="100%" style="display:block">
-      <rect width="64" height="64" rx="14" fill="#1E293B"/>
-      <circle cx="32" cy="32" r="16" fill="none" stroke="#38BDF8" stroke-width="3.5"/>
-      <polygon points="32,20 42,38 22,38" fill="#10B981"/>
-    </svg>
-  </span>`;
+  return `<span style="${box};background:#141413;color:#fff;font-size:${Math.round(s*0.42)}px;font-weight:600">${p.name[0]}</span>`;
 }
 export function viewPlatforms(){
   const cards = S.platforms.map(p => {
@@ -758,7 +716,12 @@ export function viewPlatform(){
     </tr>`).join('')
     : '<tr><td colspan="6" style="padding:36px;text-align:center" class="muted">No token movements yet.</td></tr>';
 
-  return `${pageHead(p.name, p.legal + ' · ' + p.sector + ' · ' + p.terms,
+  const headContent = `<div class="row gap16" style="align-items:center">
+    ${platformMark(p, 44)}
+    <div><h1 style="margin:0">${p.name}</h1><p style="margin:2px 0 0">${p.legal} · ${p.sector} · ${p.terms}</p></div>
+  </div>`;
+
+  return `${pageHead(headContent, '',
     `<div class="row gap8">
       <button class="btn btn-ghost" data-act="redeem" data-key="${p.key}" ${held<=0?'disabled':''}>${ic('flame','icon-sm')} Request redemption</button>
       <button class="btn btn-primary" data-act="mint" data-key="${p.key}">${ic('coins','icon-sm')} Mint tokens</button></div>`,
@@ -871,7 +834,7 @@ export function viewWallets(){
         </div>`).join('')}</div>
       <div style="padding:14px 20px;border-top:1px solid var(--line-soft)">
         <div class="callout c-neutral">${ic('shield','icon-sm')}<div>
-          Every token you mint is delivered to this address and no other. It is managed by Theoriq outside KBridge, so it is shown here read-only.</div></div>
+          Every token you mint is delivered to this address and no other. It is managed by the capital partner outside KBridge, so it is shown here read-only.</div></div>
       </div>
     </div>` : `
     <div class="card">
@@ -881,7 +844,7 @@ export function viewWallets(){
           <span class="v mono">${short((funds.find(w=>w.primary)||funds[0]||{address:'—'}).address)}</span></div>
         <div class="kv"><span class="k">Pays out redemptions</span>
           <span class="v">Chosen when you settle each request</span></div>
-        <div class="kv"><span class="k">Network</span><span class="v">Base · USDC</span></div>
+        <div class="kv"><span class="k">Network</span><span class="v">Hedera · USDC</span></div>
         <div class="callout c-neutral" style="margin-top:12px">${ic('info','icon-sm')}<div>
           Add every wallet you want to receive capital in or pay redemptions from. The default wallet receives mint proceeds.</div></div>
       </div>
@@ -917,21 +880,11 @@ export function viewDashSupply(){
         `<button class="btn btn-primary btn-sm" data-act="publish">${ic('upload','icon-sm')} Publish now</button>`)
     : banner('green','check', `<b>Today’s token value is published</b> at ${nav(navOf(p))}. Every holder is marked at this value.`, '');
 
-  const pubRows = S.navPublishes.slice(0,5).map((x,i) => {
-    const prev = S.navPublishes[i+1];
-    const ch = prev ? (x.value/prev.value - 1)*100 : 0;
-    return `<tr class="hover-row">
-      <td class="mono">${dstr(x.at)}<div class="faint" style="font-size:11px">${ago(x.at)}</div></td>
-      <td class="mono t-right" style="font-weight:500">${nav(x.value)}</td>
-      <td class="mono t-right">${nf(x.pool,0)}</td>
-      <td class="mono t-right ${ch>=0?'pos':'neg'}">${prev?pct(ch):'—'}</td></tr>`;
-  }).join('');
-
-  return `${pageHead('Dashboard', p.legal,
+  return `${pageHead('Dashboard', 'Originating Party',
     `<button class="btn btn-primary" data-act="publish">${ic('upload','icon-sm')} Publish token value</button>`)}
   ${alert}
 
-  <div class="stats">
+  <div class="stats" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
     ${stat('Capital received','bank', nf(cash,0)+' <span style="font-size:15px;color:var(--muted)" class="mono">USDC</span>', 'Across '+funds.length+' registered wallets')}
     ${stat('Tokens minted','db', nf(p.outstanding,0)+' <span style="font-size:15px;color:var(--muted)" class="mono">'+p.symbol+'</span>', 'Held by capital partners')}
     ${stat('Pool value','layers', nf(poolOf(p),0)+' <span style="font-size:15px;color:var(--muted)" class="mono">USDC</span>', 'Tokens minted × '+nav(navOf(p)))}
@@ -940,47 +893,33 @@ export function viewDashSupply(){
       : nf(owed,2)+' USDC payable · funded')}
   </div>
 
-  <div class="cols cols-2-1">
-    <div class="stack" style="gap:20px">
-      <div class="card">
-        <div class="card-head"><h3>${ic('activity','icon-sm')} Published token value</h3>
-          <span class="badge ${publishedToday(p)?'b-green':'b-amber'}"><span class="dot"></span>${publishedToday(p)?'Published today':'Not published today'}</span></div>
-        <div style="padding:18px 18px 4px">${chart(p.history, {h:230})}</div>
-        <div class="between" style="padding:14px 22px 18px;border-top:1px solid var(--line-soft);flex-wrap:wrap;gap:14px">
-          <div><div class="micro">Latest</div><div class="mono" style="font-size:15px;margin-top:3px">${nav(navOf(p))}</div></div>
-          <div><div class="micro">Previous day</div><div class="mono" style="font-size:15px;margin-top:3px">${nav(p.history[p.history.length-2].v)}</div></div>
-          <div><div class="micro">Change</div><div class="mono ${changeOf(p)>=0?'pos':'neg'}" style="font-size:15px;margin-top:3px">${pct(changeOf(p))}</div></div>
-          <div><div class="micro">Since opening</div><div class="mono pos" style="font-size:15px;margin-top:3px">${pct(inceptionOf(p))}</div></div>
-        </div>
+  <div class="stack" style="gap:24px">
+    <div class="card">
+      <div class="card-head">
+        <h3>${ic('hourglass','icon-sm')} Redemption queue</h3>
+        <button class="btn btn-quiet btn-sm" data-act="view" data-view="redemptions">All redemptions ${ic('right','icon-sm')}</button>
       </div>
-
-      <div class="card">
-        <div class="card-head"><h3>${ic('hourglass','icon-sm')} Redemption queue</h3>
-          <button class="btn btn-quiet btn-sm" data-act="view" data-view="redemptions">All ${ic('right','icon-sm')}</button></div>
-        <div class="table-scroll"><table>
-          <thead><tr><th>Request</th><th>Holder</th><th class="t-right">Tokens</th><th class="t-right">Payable</th>
-            <th>Submitted</th><th>Status</th><th></th></tr></thead>
-          <tbody>${requestRows(pend.slice(0,4), {cols:7, showHolder:true, honour:true, empty:'Queue is clear.'})}</tbody></table></div>
-      </div>
-
-      ${facilitiesCard(p)}
-      ${activityCard(5)}
+      <div class="table-scroll"><table>
+        <thead><tr><th>Request</th><th>Holder</th><th class="t-right">Tokens</th><th class="t-right">Payable</th>
+          <th>Submitted</th><th>Status</th><th></th></tr></thead>
+        <tbody>${requestRows(pend.slice(0,5), {cols:7, showHolder:true, honour:true, empty:'Queue is clear.'})}</tbody></table></div>
     </div>
 
-    <div class="stack" style="gap:20px">
-      ${balancesCard()}
-      ${quickActions([
-        ['publish','Publish token value','Mark the pool for today',false],
-        ['view','Settle a redemption','Pay a holder and burn their tokens', pend.length===0,'data-view="redemptions"'],
-        ['wallet-add','Register a wallet','Receive capital and pay redemptions',false]
-      ])}
-      <div class="card">
-        <div class="card-head"><h3>${ic('clock','icon-sm')} Recent publications</h3></div>
-        <div class="table-scroll"><table>
-          <thead><tr><th>Date</th><th class="t-right">Per token</th><th class="t-right">Pool</th><th class="t-right">Δ</th></tr></thead>
-          <tbody>${pubRows}</tbody></table></div>
+    <div class="card">
+      <div class="card-head"><h3>${ic('activity','icon-sm')} Published token value</h3>
+        <span class="badge ${publishedToday(p)?'b-green':'b-amber'}"><span class="dot"></span>${publishedToday(p)?'Published today':'Not published today'}</span></div>
+      <div style="padding:18px 18px 4px">${chart(p.history, {h:230})}</div>
+      <div class="between" style="padding:14px 22px 18px;border-top:1px solid var(--line-soft);flex-wrap:wrap;gap:14px">
+        <div><div class="micro">Latest</div><div class="mono" style="font-size:15px;margin-top:3px">${nav(navOf(p))}</div></div>
+        <div><div class="micro">Previous day</div><div class="mono" style="font-size:15px;margin-top:3px">${nav(p.history[p.history.length-2].v)}</div></div>
+        <div><div class="micro">Change</div><div class="mono ${changeOf(p)>=0?'pos':'neg'}" style="font-size:15px;margin-top:3px">${pct(changeOf(p))}</div></div>
+        <div><div class="micro">Since opening</div><div class="mono pos" style="font-size:15px;margin-top:3px">${pct(inceptionOf(p))}</div></div>
       </div>
     </div>
+
+    ${facilitiesCard(p)}
+
+    ${viewOriginatorNoteRequests(S, CTX)}
   </div>`;
 }
 
@@ -1042,7 +981,6 @@ export function modalShell(title, sub, icon, body, foot, wide){
     ${foot ? '<div class="modal-foot">'+foot+'</div>' : ''}
   </div>`;
 }
-export const spinner = '<svg class="icon icon-sm spin" viewBox="0 0 24 24"><path d="'+P.refresh+'"/></svg>';
 export const walletOptions = org => fundWallets(org).map(w => ({ v:w.id, label:w.label, sub:short(w.address)+' · '+nf(w.usdc,2)+' USDC' }));
 
 /* ---------- step runner ---------- */
@@ -1074,6 +1012,15 @@ export function successBlock(title, lines, tx){
     <div class="panel">${lines.map(([k,v]) => `<div class="kv"><span class="k">${k}</span><span class="v mono">${v}</span></div>`).join('')}</div>
     <div><div class="micro" style="margin-bottom:6px">Transaction</div><div class="hashbox mono">${tx}</div></div>`;
 }
+
+export const CTX = {
+  PL, openPL, navOf, changeOf, inceptionOf, poolOf,
+  wal, fundWallets, tokenWallet, orgCash, heldOf, lockedOf,
+  positionValue, investedPlatforms, costOf, totalCost,
+  myRequests, pfRequests, openModal, closeModal, modalShell,
+  execSteps, successBlock, toast,
+  get render() { return render; }
+};
 
 /* ============================================================
    Mint — USDC into platform tokens
@@ -1131,7 +1078,7 @@ export function mintRender(){
       </div>`;
     const foot = `<button class="btn btn-ghost" data-act="close">Cancel</button>
       <button class="btn btn-primary" data-act="mint-review" ${over||M.amt<=0?'disabled':''}>Review ${ic('right','icon-sm')}</button>`;
-    openModal(modalShell('Mint tokens', 'Turn USDC into '+p.name+' tokens', 'coins', body, foot));
+    openModal(modalShell('Mint tokens', 'Turn USDC into platform tokens', 'coins', body, foot));
     document.getElementById('mAmt').addEventListener('input', e => {
       M.amt = Math.max(0, Number(e.target.value)||0); mintPreview();
     });
@@ -1153,12 +1100,12 @@ export function mintRender(){
         ${[['1','USDC leaves '+esc(w.label)],
            ['2',nf(mintTokens(),2)+' '+p.symbol+' is minted'],
            ['3','Tokens are delivered to '+esc(tw.label)],
-           ['4','USDC settles to '+p.name+'’s funding wallet']].map(([n,t]) =>
+           ['4','USDC settles to the originating party’s funding wallet']].map(([n,t]) =>
           `<div class="row gap12" style="font-size:13px;color:var(--ink-2)">
             <span class="numdot mono">${n}</span>${t}</div>`).join('')}
       </div>
     </div>
-    <div class="callout c-amber">${ic('alert','icon-sm')}<div>Minting cannot be reversed. To exit, submit a redemption request and ${p.name} settles it.</div></div>`;
+    <div class="callout c-amber">${ic('alert','icon-sm')}<div>Minting cannot be reversed. To exit, submit a redemption request.</div></div>`;
   const foot = `<button class="btn btn-ghost" data-act="mint-back">Back</button>
     <button class="btn btn-primary" data-act="mint-go">${ic('shield','icon-sm')} Confirm</button>`;
   openModal(modalShell('Confirm', 'Check the details before you continue', 'shield', body, foot));
@@ -1182,30 +1129,81 @@ export function mintGo(){
     return;
   }
   const dest = p.key === 'pursuit' ? fundWallets('pursuit').find(x => x.primary) : null;
-  const amt = M.amt, tokens = mintTokens(), tx = hash();
+  const amt = M.amt, tokens = mintTokens();
+  const reqId = 'REQ-2026-0' + (82 + ((S.mintRequests && S.mintRequests.length) ? S.mintRequests.length - 3 : 0));
+
   const steps = [
-    { label:'Confirming with your wallet', meta:w.label, ms:1000 },
-    { label:'Withdrawing '+nf(amt,2)+' USDC', meta:'From '+short(w.address), ms:1050,
-      fx:()=>{ w.usdc -= amt; S.escrow.usdc += amt; } },
-    { label:'Minting '+nf(tokens,2)+' '+p.symbol, meta:'At '+nav(navOf(p))+' per token', ms:1150,
-      fx:()=>{ S.escrow.tokens += tokens; } },
-    { label:'Delivering tokens to your token wallet', meta:tw.label+' · '+short(tw.address), ms:1000,
-      fx:()=>{ S.escrow.tokens -= tokens; tw.bal[p.key] += tokens; p.outstanding += tokens; } },
-    { label:'Settling USDC to '+p.name, meta:dest ? dest.label+' · '+short(dest.address) : p.name+' funding wallet', ms:1050,
-      fx:()=>{ S.escrow.usdc -= amt; if (dest) dest.usdc += amt; } }
+    { label:'Authorizing capital allocation from wallet', meta:w.label, ms:900 },
+    { label:'Submitting formal capital mint request to KBridge Protocol', meta:'Request ID: '+reqId, ms:1000 }
   ];
-  openModal(modalShell('Minting', nf(amt,2)+' USDC → '+nf(tokens,2)+' '+p.symbol, 'coins', '<div class="steps"></div>', ''));
+
+  openModal(modalShell('Submitting Capital Request', nf(amt,2)+' USDC → '+nf(tokens,2)+' '+p.symbol, 'coins', '<div class="steps"></div>', ''));
   execSteps(steps, () => {
-    S.positions.unshift({ pf:p.key, type:'mint', at:new Date(TODAY), tokens, nav:navOf(p), usdc:amt, tx });
-    S.feed.unshift({ ic:'coins', tone:'neutral', text:'You minted '+nf(tokens,2)+' '+p.symbol+' on '+p.name+'.', at:new Date(TODAY) });
-    openModal(modalShell('Done', 'Your tokens are in your token wallet', 'check',
-      successBlock('Minted '+nf(tokens,2)+' '+p.symbol, [
-        ['Paid', nf(amt,2)+' USDC'], ['Value per token', nav(navOf(p))],
-        ['Held in', tw.label], ['Settled to', p.name]
-      ], tx),
-      `<button class="btn btn-ghost" data-act="close">Close</button>
-       <button class="btn btn-primary" data-act="goto-platform" data-key="${p.key}">View platform ${ic('right','icon-sm')}</button>`));
-    toast.success('Minted '+nf(tokens,2)+' '+p.symbol, nf(amt,2)+' USDC settled to '+p.name, 'coins');
+    const newReq = {
+      id: reqId,
+      pf: p.key,
+      holder: 'Theoriq',
+      holderKey: 'theoriq',
+      amt,
+      tokens,
+      navAt: navOf(p),
+      payFrom: w.address,
+      payFromLabel: w.label,
+      tokenCustody: tw.address,
+      destWallet: dest ? dest.address : '0x5d71ac09e4b83f26d1c7590ae4bb3f8021d64c7a',
+      destWalletLabel: dest ? dest.label : 'Originating Party Funding Wallet',
+      status: 'Pending Admin Review',
+      created: new Date(TODAY),
+      notesRequestedAt: null,
+      noteType: '',
+      instructions: '',
+      documents: [],
+      mintedAt: null,
+      tx: null
+    };
+    if (!S.mintRequests) S.mintRequests = [];
+    S.mintRequests.unshift(newReq);
+    S.feed.unshift({ ic:'coins', tone:'neutral', text:'Capital Partner filed capital request '+reqId+' for '+nf(tokens,2)+' '+p.symbol+'.', at:new Date(TODAY) });
+
+    const body = `
+      <div style="text-align:center;padding:8px 0 12px">
+        <div class="tick">${ic('check','icon-lg')}</div>
+        <h3 style="font-size:17px;font-weight:600;margin-top:14px">Capital Request Submitted</h3>
+        <p class="muted" style="font-size:13.5px;max-width:440px;margin:6px auto 0">
+          Request <b class="mono" style="color:var(--ink)">${reqId}</b> has been received by KBridge Protocol administrators.
+        </p>
+      </div>
+
+      <div style="margin-bottom:16px">
+        ${pipelineStepper('Pending Admin Review')}
+      </div>
+
+      <div class="panel">
+        <div class="kv"><span class="k">Platform</span><span class="v">${p.name}</span></div>
+        <div class="kv"><span class="k">Capital Amount</span><span class="v mono">${nf(amt,2)} USDC</span></div>
+        <div class="kv"><span class="k">Tokens to Mint</span><span class="v mono">${nf(tokens,2)} ${p.symbol}</span></div>
+        <div class="kv"><span class="k">Source Wallet</span><span class="v">${esc(w.label)}</span></div>
+        <div class="kv"><span class="k">Pipeline Status</span><span class="v">${mintStatusBadge('Pending Admin Review')}</span></div>
+      </div>
+
+      <div class="callout c-neutral">
+        ${ic('info','icon-sm')}
+        <div style="font-size:12.5px;line-height:1.5">
+          <b>Next steps:</b> KBridge admins will file a note request with the Originating Party to produce compliant Promissory Notes. Once approved, Hedera smart contracts will execute token minting and fund transfer.
+        </div>
+      </div>
+    `;
+
+    const foot = `
+      <button class="btn btn-ghost" data-act="close">Close</button>
+      <button class="btn btn-primary" data-act="switch-role" data-org="kbridge">
+        ${ic('shield','icon-sm')} Open KBridge Admin to Process
+      </button>
+    `;
+
+    openModal(modalShell('Capital Request Active', reqId, 'coins', body, foot));
+    toast.success('Capital request submitted', reqId + ' sent to KBridge admins', 'coins');
+    render();
   });
 }
 
@@ -1262,10 +1260,10 @@ export function redeemRender(){
       </div>
 
       <div class="callout c-amber">${ic('lock','icon-sm')}<div>
-        These tokens are locked as soon as you submit, until ${p.name} settles the request.</div></div>`;
+        These tokens are locked as soon as you submit, until the originating party settles the request.</div></div>`;
     const foot = `<button class="btn btn-ghost" data-act="close">Cancel</button>
       <button class="btn btn-primary" data-act="rdm-review" ${R.tokens<=0?'disabled':''}>Review ${ic('right','icon-sm')}</button>`;
-    openModal(modalShell('Request redemption', 'Burn '+p.name+' tokens back into USDC', 'flame', body, foot));
+    openModal(modalShell('Request redemption', 'Burn tokens back into USDC', 'flame', body, foot));
 
     const t = document.getElementById('rTok'), sl = document.getElementById('rSlide');
     t.addEventListener('input', e => { R.tokens = Math.min(held, Math.max(0, Number(e.target.value)||0)); sl.value = R.tokens; redeemPreview(); });
@@ -1285,7 +1283,7 @@ export function redeemRender(){
         <span class="v mono" style="font-size:15px">${nf(R.tokens*navOf(p),2)} USDC</span></div>
     </div>
     <div class="callout c-neutral">${ic('info','icon-sm')}<div>
-      The request goes into ${p.name}’s queue. You can follow it from your dashboard.</div></div>`;
+      The request goes into the originating party’s settlement queue. You can follow it from your dashboard.</div></div>`;
   const foot = `<button class="btn btn-ghost" data-act="rdm-back">Back</button>
     <button class="btn btn-primary" data-act="rdm-go">${ic('shield','icon-sm')} Submit request</button>`;
   openModal(modalShell('Confirm request', 'Tokens lock as soon as you submit', 'shield', body, foot));
@@ -1310,14 +1308,14 @@ export function redeemGo(){
     { label:'Checking your balance', meta:nf(heldOf(p.key),2)+' '+p.symbol+' available', ms:950 },
     { label:'Locking '+nf(tokens,2)+' '+p.symbol, meta:'Released when settled or on '+dstr(new Date(TODAY.getTime()+2*86400000)), ms:1050,
       fx:()=>{ tw.bal[p.key] -= tokens; tw.lock[p.key] += tokens; } },
-    { label:'Sending the request to '+p.name, meta:'Queued as '+id, ms:1050,
-      fx:()=>{ S.requests.unshift({ id, pf:p.key, holder:'Theoriq Capital Management', holderKey:'theoriq', tokens, navAt,
+    { label:'Sending the request to the originating party', meta:'Queued as '+id, ms:1050,
+      fx:()=>{ S.requests.unshift({ id, pf:p.key, holder:'Capital Partner', holderKey:'theoriq', tokens, navAt,
         payTo:w.address, created:new Date(TODAY), lockUntil:new Date(TODAY.getTime()+2*86400000), status:'Pending' }); } }
   ];
   openModal(modalShell('Submitting', nf(tokens,2)+' '+p.symbol, 'flame', '<div class="steps"></div>', ''));
   execSteps(steps, () => {
     S.feed.unshift({ ic:'flame', tone:'amber', text:'You requested redemption of '+nf(tokens,2)+' '+p.symbol+' ('+id+').', at:new Date(TODAY) });
-    openModal(modalShell('Request submitted', p.name+' will settle it from the queue', 'check',
+    openModal(modalShell('Request submitted', 'The originating party will settle it from the queue', 'check',
       successBlock('Request '+id+' submitted', [
         ['Platform', p.name], ['Tokens locked', nf(tokens,2)+' '+p.symbol],
         ['Value per token', nav(navAt)], ['You receive', nf(tokens*navAt,2)+' USDC'], ['Into', w.label]
@@ -1369,7 +1367,7 @@ export function honorRender(){
     ${short_ ? '<div class="err">'+ic('alert','icon-sm')+' This wallet holds less than the amount payable.</div>' : ''}`;
   const foot = `<button class="btn btn-ghost" data-act="close">Cancel</button>
     <button class="btn btn-primary" data-act="honor-go" ${short_?'disabled':''}>${ic('shield','icon-sm')} Pay and burn</button>`;
-  openModal(modalShell('Settle redemption', 'Pay the holder and burn their tokens', 'bank', body, foot));
+  openModal(modalShell('Settle redemption', 'Pay the capital partner and burn their tokens', 'bank', body, foot));
   document.getElementById('hPrice').addEventListener('input', e => {
     H.price = Math.max(0, Number(e.target.value)||0); honorPreview();
   });
@@ -1395,7 +1393,7 @@ export function honorGo(){
     { label:'Confirming with your wallet', meta:w.label, ms:1000 },
     { label:'Taking '+nf(total,2)+' USDC from '+w.label, meta:short(w.address), ms:1050,
       fx:()=>{ w.usdc -= total; S.escrow.usdc += total; } },
-    { label:'Paying the holder', meta:short(r.payTo), ms:1050,
+    { label:'Paying the capital partner', meta:short(r.payTo), ms:1050,
       fx:()=>{ S.escrow.usdc -= total; if (dest) dest.usdc += total; } },
     { label:'Burning '+nf(r.tokens,2)+' '+p.symbol, meta:'Removed from supply', ms:1150,
       fx:()=>{ if (mine) tw.lock[p.key] -= r.tokens; p.outstanding -= r.tokens;
@@ -1408,7 +1406,7 @@ export function honorGo(){
       costOut: costPerToken(p.key)*r.tokens, tx });
     openModal(modalShell('Settled', 'Funds delivered and tokens burned', 'check',
       successBlock('Redemption '+r.id+' settled', [
-        ['Holder', r.holder], ['Tokens burned', nf(r.tokens,2)+' '+p.symbol],
+        ['Capital partner', r.holder], ['Tokens burned', nf(r.tokens,2)+' '+p.symbol],
         ['Value per token', nav(H.price)], ['Paid', nf(total,2)+' USDC'], ['From', w.label]
       ], tx),
       '<button class="btn btn-primary" data-act="close">Done</button>'));
@@ -1512,29 +1510,32 @@ export function publishGo(){
 export let WM = {};
 export function walletModal(id){
   const w = id ? wal(id) : null;
-  WM = { id, net: w ? w.network : 'Base', use: 'both' };
+  WM = { id, net: 'Hedera' };
   walletModalRender();
 }
 export function walletModalRender(){
   const w = WM.id ? wal(WM.id) : null;
   const body = `
+    <div class="callout c-neutral" style="margin-bottom:18px;background:#F6F6F3;border:1px solid var(--line);border-radius:var(--r-md);padding:12px 16px">
+      <div style="display:flex;align-items:center;gap:16px">
+        <div style="background:#fff;border:1px solid var(--line-soft);border-radius:8px;padding:6px 12px;flex:none;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,0.04)">
+          ${HEDERA_LOGO}
+        </div>
+        <div style="font-size:13px;color:var(--ink-2);line-height:1.45;flex:1">
+          All capital transactions &amp; USDC settlement run on <b>Hedera Network</b>
+        </div>
+      </div>
+    </div>
     <label class="field"><span>Name</span>
       <input class="input" id="wLabel" value="${w?esc(w.label):''}" placeholder="e.g. Treasury Operations"></label>
-    <label class="field"><span>Wallet address</span>
-      <input class="input mono" id="wAddr" value="${w?w.address:''}" placeholder="0x…" style="font-size:12.5px"></label>
-    <div class="cols" style="grid-template-columns:1fr 1fr;gap:14px">
-      <label class="field"><span>Network</span>
-        ${selectBox('wNet', [{v:'Base',label:'Base'},{v:'Ethereum',label:'Ethereum'},{v:'Polygon',label:'Polygon'}], WM.net,
-          v => { WM.net = v; })}</label>
-      <label class="field"><span>Used for</span>
-        ${selectBox('wUse', [{v:'both',label:'Sending and receiving'},{v:'send',label:'Sending only'},{v:'receive',label:'Receiving only'}], WM.use,
-          v => { WM.use = v; })}</label>
-    </div>
-    ${w ? '' : `<label class="field"><span>Starting balance</span>
+    <label class="field"><span>Hedera wallet address</span>
+      <input class="input mono" id="wAddr" value="${w?w.address:''}" placeholder="0x… or 0.0.xxxxx" style="font-size:12.5px">
+      <div class="hint" style="margin-top:4px;font-size:11.5px;color:var(--muted)">Hedera EVM address or native Account ID</div></label>
+    ${w ? '' : `<label class="field"><span>Starting balance (USDC)</span>
       <input class="input mono" id="wBal" type="number" step="1000" value="0"></label>`}`;
   const foot = `<button class="btn btn-ghost" data-act="close">Cancel</button>
     <button class="btn btn-primary" data-act="wallet-save">${ic('check','icon-sm')} ${w?'Save changes':'Add wallet'}</button>`;
-  openModal(modalShell(w?'Edit wallet':'Add wallet', w?'Update this wallet':'Register a wallet to send and receive funds', 'wallet', body, foot));
+  openModal(modalShell(w?'Edit wallet':'Add wallet', w?'Update this Hedera wallet':'Register a Hedera wallet to send and receive funds', 'wallet', body, foot));
 }
 export function walletSave(){
   const label = (document.getElementById('wLabel')||{}).value ? document.getElementById('wLabel').value.trim() : '';
@@ -1547,12 +1548,12 @@ export function walletSave(){
     const w = wal(WM.id);
     w.label = label;
     w.address = address;
-    w.network = WM.net;
+    w.network = 'Hedera';
     toast.info('Wallet updated', label, 'check');
   } else {
     const bal = Number((document.getElementById('wBal')||{}).value) || 0;
-    S.wallets.push({ id:uid('w'), org:S.org, kind:'funds', label, address, network:WM.net, usdc:bal });
-    toast.success('Wallet registered', label + ' on ' + WM.net, 'wallet');
+    S.wallets.push({ id:uid('w'), org:S.org, kind:'funds', label, address, network:'Hedera', usdc:bal });
+    toast.success('Wallet registered', label + ' on Hedera', 'wallet');
   }
   closeModal();
   render();
@@ -1603,13 +1604,36 @@ export function render(){
     });
     return;
   }
-  const cap = S.org === 'theoriq';
-  const views = cap
-    ? { dash:viewDashCapital, platforms:viewPlatforms, platform:viewPlatform, wallets:viewWallets }
-    : { dash:viewDashSupply, redemptions:viewRedemptionsSupply, wallets:viewWallets };
-  const fn = views[S.view] || views.dash;
+  const isAdmin = S.org === 'kbridge';
+  const isCap = S.org === 'theoriq';
+  let fn;
+  if (isAdmin) {
+    const adminViews = {
+      dash: () => viewAdminDashboard(S, CTX),
+      redemptions: viewRedemptionsSupply,
+      wallets: viewWallets
+    };
+    fn = adminViews[S.view] || adminViews.dash;
+  } else if (isCap) {
+    const capViews = {
+      dash: viewDashCapital,
+      platforms: viewPlatforms,
+      platform: viewPlatform,
+      requests: () => pageHead('Capital Requests', 'Track your token mint requests and legal note coordination with KBridge', '<button class="btn btn-primary" data-act="mint">' + ic('plus','icon-sm') + ' Request to Mint</button>') + viewCapitalPartnerRequests(S, CTX),
+      wallets: viewWallets
+    };
+    fn = capViews[S.view] || capViews.dash;
+  } else {
+    const supplyViews = {
+      dash: viewDashSupply,
+      requests: () => pageHead('Note & Contract Requests', 'Upload signed promissory notes and legal contracts requested by KBridge', '') + viewOriginatorNoteRequests(S, CTX),
+      redemptions: viewRedemptionsSupply,
+      wallets: viewWallets
+    };
+    fn = supplyViews[S.view] || supplyViews.dash;
+  }
   root.innerHTML = header() + '<main><div class="wrap fadein">' + fn() + '</div></main>';
-  if (S.view === 'platform' || (!cap && S.view === 'dash')) bindChart();
+  if (S.view === 'platform' || (!isCap && !isAdmin && S.view === 'dash')) bindChart();
 }
 export function go(v){ S.view = v; window.scrollTo(0,0); render(); }
 
@@ -1669,6 +1693,42 @@ document.addEventListener('click', e => {
   else if (a === 'close'){ closeModal(); render(); }
   else if (a === 'notif'){ notifModal(); }
   else if (a === 'acct'){ go('wallets'); }
+
+  else if (a === 'toggle-admin'){
+    S.adminHidden = !S.adminHidden;
+    render();
+    toast.info(S.adminHidden ? 'Admin button hidden' : 'Admin button visible', 'Click the eye icon to toggle visibility', S.adminHidden ? 'eyeOff' : 'eye');
+  }
+  else if (a === 'login-admin'){
+    S.org = 'kbridge';
+    S.gateOrg = null;
+    S.view = 'dash';
+    closeModal();
+    render();
+    toast.info('Signed in as KBridge Admin', ORGS.kbridge.tag, 'shield');
+  }
+  else if (a === 'switch-role'){
+    S.org = t.dataset.org;
+    S.view = 'dash';
+    closeModal();
+    render();
+    toast.info('Switched to ' + ORGS[S.org].name, ORGS[S.org].tag, 'shield');
+  }
+  else if (a === 'admin-req-notes'){
+    openRequestNotesModal(t.dataset.id, S, CTX);
+  }
+  else if (a === 'originator-upload-notes'){
+    openUploadNotesModal(t.dataset.id, S, CTX);
+  }
+  else if (a === 'admin-inspect-mint'){
+    openInspectAndMintModal(t.dataset.id, S, CTX);
+  }
+  else if (a === 'req-details'){
+    openRequestDetailsModal(t.dataset.id, S, CTX);
+  }
+  else if (a === 'download-doc'){
+    toast.success('Downloaded ' + (t.dataset.name || 'document'), 'Contract saved to local storage', 'download');
+  }
 
   else if (a === 'mint'){ mintOpen(t.dataset.key); }
   else if (a === 'mint-pct'){ const w = wal(M.wid); M.amt = Math.round(w.usdc * (+t.dataset.p)/100); mintRender(); }
