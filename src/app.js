@@ -27,7 +27,7 @@ export const ORGS = {
     tag:'Originating Party', side:'Supply side · brings invoices', color:'#57534E', soft:'#F5F5F3', line:'#E4E4E0',
     email:'ops@originator.finance', blurb:'Raise capital against tokenised invoices, publish the daily token value and settle redemptions.' },
   kbridge:{ key:'kbridge', name:'KBridge Admin', legal:'KBridge Protocol Governance', role:'admin',
-    tag:'KBridge Admin', side:'Development Team & Protocol Admins', color:'#0F172A', soft:'#F1F5F9', line:'#CBD5E1',
+    tag:'Admin', side:'Protocol administration & oversight', color:'#0F172A', soft:'#F1F5F9', line:'#CBD5E1',
     email:'admin@kbridge.io', blurb:'Coordinate capital requests, file formal note requests with originating parties, audit contracts, and mint on Hedera.' }
 };
 
@@ -372,7 +372,8 @@ export function selectBox(id, options, value, onPick){
 export function gateScreen(){
   const card = k => {
     const o = ORGS[k];
-    return `<button class="gate-card" data-act="pick" data-org="${k}">
+    const isAdmin = k === 'kbridge';
+    return `<button class="gate-card" data-act="${isAdmin ? 'login-admin' : 'pick'}" ${isAdmin ? '' : `data-org="${k}"`}>
       <div class="between" style="align-items:center;min-height:38px">
         <span class="partner-pill">${o.tag}</span>
         <span class="gate-arrow">${ic('right','icon-sm')}</span>
@@ -390,7 +391,7 @@ export function gateScreen(){
     <h1 style="font-size:26px;font-weight:600;letter-spacing:-.02em;margin-top:16px">Partner sign in</h1>
     <p class="muted" style="font-size:14px;margin-top:6px;text-align:center;max-width:520px">
       KBridge connects capital partners with the platforms that originate receivables.</p>
-    <div class="gate-grid" style="max-width:720px">${card('theoriq')}${card('pursuit')}</div>
+    <div class="gate-grid">${card('theoriq')}${card('pursuit')}${card('kbridge')}</div>
   </div>`;
 }
 
@@ -443,7 +444,7 @@ export function header(){
   const tabs = () => navItems().map(([k,l]) =>
     `<button class="${(S.view===k || (k==='platforms' && S.view==='platform'))?'on':''}" data-act="view" data-view="${k}">${l}</button>`).join('');
 
-  const adminPendingCount = (S.mintRequests || []).filter(r => r.status === 'Pending Admin Review' || r.status === 'Documents Uploaded').length;
+  const adminPendingCount = (S.mintRequests || []).filter(r => r.status === 'Documents Uploaded').length;
 
   return `<header class="app"><div class="wrap">
     <div class="hbar">
@@ -527,61 +528,52 @@ export function activityCard(n){
   return `<div class="card"><div class="card-head"><h3>${ic('activity','icon-sm')} Recent activity</h3></div><div>${feed}</div></div>`;
 }
 export function facilitiesCard(p){
-  if (!p.facilities.length) return '';
-  const total = p.facilities.reduce((a,f)=>a+f.amount,0);
-  return `<div class="card">
-    <div class="card-head"><h3>${ic('file','icon-sm')} Invoices backing this platform</h3>
-      <span class="mono" style="font-size:12.5px;font-weight:500">${nf(total,0)} USDC</span></div>
-    <div class="table-scroll"><table>
-      <thead><tr><th>Invoice</th><th>Borrower</th><th>Sector</th><th class="t-right">Face value</th>
-        <th class="t-right">Yield</th><th class="t-right">Term</th><th>Status</th></tr></thead>
-      <tbody>${p.facilities.map(f => `<tr class="hover-row">
-        <td class="mono" style="font-weight:500">${f.id}</td>
-        <td>${esc(f.name)}</td>
-        <td class="muted">${f.sector}</td>
-        <td class="mono t-right">${nf(f.amount,0)}</td>
-        <td class="mono t-right">${f.yield.toFixed(1)}%</td>
-        <td class="mono t-right">${f.term}d</td>
-        <td>${statusBadge(f.status)}</td></tr>`).join('')}</tbody></table></div>
-  </div>`;
+  return '';
 }
 export function requestRows(list, opts){
   opts = opts || {};
   if (!list.length) return `<tr><td colspan="${opts.cols||6}" style="padding:36px;text-align:center" class="muted">${opts.empty||'Nothing here yet.'}</td></tr>`;
   return list.map(r => {
     const p = PL(r.pf);
-    const val = r.status === 'Settled' ? (r.paid || r.tokens*r.navAt) : r.tokens*navOf(p);
+    const isMint = r.reqType === 'mint' || (r.id && r.id.startsWith('REQ-'));
+    const val = isMint ? (r.amt || 0) : (r.status === 'Settled' ? (r.paid || r.tokens*r.navAt) : r.tokens*navOf(p));
     const doc = (r.documents && r.documents[0]) || {
-      name: `Redemption_Notice_${r.id}_${p ? p.symbol : 'PUR'}.pdf`,
+      name: isMint ? `Promissory_Note_${r.id}_${p ? p.symbol : 'PUR'}.pdf` : `Redemption_Notice_${r.id}_${p ? p.symbol : 'PUR'}.pdf`,
       size: '1.8 MB',
       uploadedAt: r.created,
-      hash: hash(),
-      signer: `${r.holder} Capital Partner Treasury`,
+      hash: r.tx || hash(),
+      signer: isMint ? 'Pursuit Legal & Treasury Ops' : `${r.holder} Capital Partner Treasury`,
       facilityId: p && p.key === 'pursuit' ? 'INV-2026-9004' : 'INV-GEN-2026',
-      status: r.status === 'Settled' ? 'Settled & Burned on Hedera' : 'Verified & Queued',
-      docType: 'Institutional Token Burn & Redemption Notice'
+      status: r.status === 'Settled' || r.status === 'Completed' ? 'Settled & Verified on Hedera' : (r.status === 'Documents Uploaded' ? 'Verified & Ready' : (isMint ? 'Awaiting Originating Partner' : 'Verified & Queued')),
+      docType: isMint ? 'Promissory Note & Invoice Assignment Contract' : 'Institutional Token Burn & Redemption Notice'
     };
     const docStr = encodeURIComponent(JSON.stringify(doc));
+
+    const statusBadgeHtml = isMint ? mintStatusBadge(r.status) : statusBadge(r.status);
+    const actionCell = isMint
+      ? `<td class="t-right"><button class="btn btn-ghost btn-sm" data-act="req-details" data-id="${r.id}">${ic('file','icon-sm')} View Status</button></td>`
+      : (opts.honour
+          ? '<td class="t-right">' + (r.status==='Pending'
+              ? '<button class="btn btn-primary btn-sm" data-act="honor" data-id="'+r.id+'">Settle '+ic('right','icon-sm')+'</button>'
+              : '<span class="faint" style="font-size:11.5px">paid '+dshort(r.settledAt||r.created)+'</span>') + '</td>'
+          : '<td class="faint t-right" style="font-size:11.5px">'+(r.status==='Pending' ? 'lock releases '+inDays(r.lockUntil) : 'paid '+dshort(r.settledAt||r.created))+'</td>');
 
     return `<tr class="hover-row">
       <td class="mono" style="font-weight:500">
         <div class="row gap8" style="align-items:center">
           <span>${r.id}</span>
+          ${isMint ? '<span class="badge b-gray" style="font-size:10px;padding:1px 5px">Mint</span>' : '<span class="badge b-amber" style="font-size:10px;padding:1px 5px">Redeem</span>'}
           <button class="doc-eye-btn" data-act="preview-doc" data-doc="${docStr}" title="Preview file metadata and status" style="padding:2px 7px;font-size:11px">
             ${ic('eye','icon-xs')} <span>Doc</span>
           </button>
         </div>
       </td>
-      ${opts.showHolder ? '<td>'+esc(r.holder)+'<div class="faint mono" style="font-size:11px">'+short(r.payTo)+'</div></td>' : '<td>'+(p ? p.name : 'Platform')+'</td>'}
-      <td class="mono t-right">${nf(r.tokens,2)} ${p ? p.symbol : 'TOK'}</td>
+      ${opts.showHolder ? '<td>'+esc(r.holder)+'<div class="faint mono" style="font-size:11px">'+short(r.payTo || r.payFrom)+'</div></td>' : '<td>'+(p ? p.name : 'Platform')+'</td>'}
+      <td class="mono t-right">${isMint ? '+' : ''}${nf(r.tokens,2)} ${p ? p.symbol : 'TOK'}</td>
       <td class="mono t-right" style="font-weight:500">${nf(val,2)}</td>
       <td class="mono">${dshort(r.created)}<div class="faint" style="font-size:11px">${ago(r.created)}</div></td>
-      <td>${statusBadge(r.status)}</td>
-      ${opts.honour
-        ? '<td class="t-right">' + (r.status==='Pending'
-            ? '<button class="btn btn-primary btn-sm" data-act="honor" data-id="'+r.id+'">Settle '+ic('right','icon-sm')+'</button>'
-            : '<span class="faint" style="font-size:11.5px">paid '+dshort(r.settledAt||r.created)+'</span>') + '</td>'
-        : '<td class="faint t-right" style="font-size:11.5px">'+(r.status==='Pending' ? 'lock releases '+inDays(r.lockUntil) : 'paid '+dshort(r.settledAt||r.created))+'</td>'}
+      <td>${statusBadgeHtml}</td>
+      ${actionCell}
     </tr>`;
   }).join('');
 }
@@ -592,10 +584,18 @@ export function viewDashCapital(){
   const value = positionValue(), cost = totalCost(), gain = value - cost;
   const invested = investedPlatforms();
   const pend = myRequests().filter(r => r.status === 'Pending');
+  const pendingMints = (S.mintRequests || []).filter(r => r.holderKey === 'theoriq' && r.status !== 'Completed');
+  const tokensAwaitingAll = pendingMints.reduce((a, r) => a + (r.tokens || 0), 0);
+  const fundsAllocatedAll = pendingMints.reduce((a, r) => a + (r.amt || 0), 0);
 
   const alert = pend.length
     ? banner('amber','hourglass',
         `<b>${pend.length} redemption request${pend.length>1?'s':''} pending settlement.</b> ${nf(pend.reduce((a,r)=>a+r.tokens,0),2)} tokens locked.`, '')
+    : '';
+
+  const mintAlert = pendingMints.length
+    ? banner('amber','hourglass',
+        `<b>${pendingMints.length} mint request${pendingMints.length>1?'s':''} in pipeline.</b> ${nf(tokensAwaitingAll,2)} PUR awaiting minting (${nf(fundsAllocatedAll,2)} USDC allocated). Originating partner auto-notified.`, '')
     : '';
 
   const holdings = invested.length ? invested.map(p => {
@@ -610,8 +610,7 @@ export function viewDashCapital(){
         <div class="t-right"><div class="mono" style="font-size:15px;font-weight:600">${nf(v,2)} USDC</div>
           <div class="mono ${g>=0?'pos':'neg'}" style="font-size:12px">${(g>=0?'+':'')+nf(g,2)} ${c?'('+pct(g/c*100)+')':''}</div></div>
         <div class="row gap8">
-          <button class="btn btn-ghost btn-sm" data-act="platform" data-key="${p.key}">View</button>
-          <button class="btn btn-primary btn-sm" data-act="mint" data-key="${p.key}">Mint</button>
+          <button class="btn btn-primary btn-sm" data-act="platform" data-key="${p.key}">View</button>
         </div>
       </div></div>`;
   }).join('') : `<div style="padding:48px;text-align:center" class="muted">
@@ -622,6 +621,7 @@ export function viewDashCapital(){
   return `${pageHead('Dashboard', 'Capital Partner',
     `<button class="btn btn-primary" data-act="view" data-view="platforms">${ic('coins','icon-sm')} Browse &amp; Mint</button>`)}
   ${alert}
+  ${mintAlert}
 
   <div class="stats" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
     ${stat('Cash available','wallet', nf(cash,0)+' <span style="font-size:15px;color:var(--muted)" class="mono">USDC</span>', 'Across fund wallets')}
@@ -666,6 +666,8 @@ export function viewPlatforms(){
   const cards = S.platforms.map(p => {
     const open = p.status === 'Open';
     const t = heldOf(p.key) + lockedOf(p.key);
+    const pendingM = (S.mintRequests || []).filter(r => r.pf === p.key && (S.org !== 'theoriq' || r.holderKey === 'theoriq') && r.status !== 'Completed');
+    const awaitingTok = pendingM.reduce((s, r) => s + (r.tokens || 0), 0);
     return `<div class="card card-pad" style="display:flex;flex-direction:column;gap:16px">
       <div class="between" style="align-items:flex-start">
         <div class="row gap12">${platformMark(p, 46)}
@@ -685,7 +687,7 @@ export function viewPlatforms(){
           <div class="mono ${open?'pos':''}" style="font-size:15px;margin-top:3px">${open? pct(inceptionOf(p)) : '—'}</div></div>
       </div>
       <div class="between" style="gap:12px">
-        <div class="faint" style="font-size:12px">${t>0 ? 'You hold <span class="mono">'+nf(t,2)+' '+p.symbol+'</span>' : (open? 'No position' : 'Opens '+dstr(p.opened))}</div>
+        <div class="faint" style="font-size:12px">${t>0 ? 'You hold <span class="mono">'+nf(t,2)+' '+p.symbol+'</span>' + (awaitingTok>0 ? ' · <span class="mono" style="color:var(--ink)">'+nf(awaitingTok,2)+' awaiting</span>' : '') : (awaitingTok>0 ? 'Awaiting mint: <span class="mono" style="color:var(--ink);font-weight:600">'+nf(awaitingTok,2)+' '+p.symbol+'</span>' : (open? 'No position' : 'Opens '+dstr(p.opened)))}</div>
         <div class="row gap8">
           <button class="btn btn-primary btn-sm" data-act="platform" data-key="${p.key}">View</button>
         </div>
@@ -704,6 +706,17 @@ export function viewPlatform(){
   const value = t * navOf(p), cost = costOf(p.key), gain = value - cost;
   const mine = myRequests(p.key);
   const moves = S.positions.filter(x => x.pf === p.key);
+
+  const isCap = S.org === 'theoriq';
+  const pendingMints = (S.mintRequests || []).filter(r => r.pf === p.key && (!isCap || r.holderKey === 'theoriq') && r.status !== 'Completed');
+  const tokensAwaiting = pendingMints.reduce((sum, r) => sum + (r.tokens || 0), 0);
+  const fundsAllocated = pendingMints.reduce((sum, r) => sum + (r.amt || 0), 0);
+  const pfMintRequests = (S.mintRequests || []).filter(r => r.pf === p.key && (!isCap || r.holderKey === 'theoriq'));
+
+  const allRequests = [
+    ...pfMintRequests.map(r => ({ ...r, reqType: 'mint' })),
+    ...mine.map(r => ({ ...r, reqType: 'redemption' }))
+  ].sort((a, b) => new Date(b.created) - new Date(a.created));
 
   const ledgerRows = moves.length ? moves.map(m => `
     <tr class="hover-row">
@@ -732,57 +745,67 @@ export function viewPlatform(){
       '<span class="'+(changeOf(p)>=0?'pos':'neg')+'">'+pct(changeOf(p))+'</span> vs. previous day · published '+ago(S.navPublishes.filter(x=>x.pf===p.key)[0] ? S.navPublishes.filter(x=>x.pf===p.key)[0].at : TODAY))}
     ${stat('Tokens minted','db', nf(p.outstanding,0)+' <span style="font-size:15px;color:var(--muted)" class="mono">'+p.symbol+'</span>', 'Across all holders')}
     ${stat('Aggregate value','layers', nf(poolOf(p),0)+' <span style="font-size:15px;color:var(--muted)" class="mono">USDC</span>', 'Tokens minted × '+nav(navOf(p)))}
-    ${stat('Your position','wallet', nf(t,2)+' <span style="font-size:15px;color:var(--muted)" class="mono">'+p.symbol+'</span>',
-      t? nf(value,2)+' USDC'+(locked? ' · '+nf(locked,2)+' locked':'') : 'No tokens yet')}
+    ${stat('Your position','wallet', (t > 0 ? nf(t,2) : (tokensAwaiting > 0 ? nf(tokensAwaiting,2) : '0.00'))+' <span style="font-size:15px;color:var(--muted)" class="mono">'+p.symbol+'</span>',
+      t ? nf(value,2)+' USDC'+(locked? ' · '+nf(locked,2)+' locked':'')+(tokensAwaiting > 0 ? ' · '+nf(tokensAwaiting,2)+' awaiting' : '')
+        : (tokensAwaiting > 0 ? '<span class="mono" style="color:var(--ink);font-weight:600">'+nf(tokensAwaiting,2)+' '+p.symbol+'</span> awaiting minting ('+nf(fundsAllocated,2)+' USDC)' : 'No tokens yet'))}
   </div>
 
-  <div class="cols cols-2-1">
-    <div class="stack" style="gap:20px">
-      <div class="card">
-        <div class="card-head"><h3>${ic('activity','icon-sm')} Token value · last 6 months</h3>
-          <span class="badge b-gray">${pct(inceptionOf(p))} since opening</span></div>
-        <div style="padding:18px 18px 4px">${chart(p.history, {h:240})}</div>
-        <div class="between" style="padding:14px 22px 18px;border-top:1px solid var(--line-soft);flex-wrap:wrap;gap:14px">
-          <div><div class="micro">Opening value</div><div class="mono" style="font-size:15px;margin-top:3px">${nav(p.inception)}</div></div>
-          <div><div class="micro">Low</div><div class="mono" style="font-size:15px;margin-top:3px">${nav(Math.min(...p.history.map(x=>x.v)))}</div></div>
-          <div><div class="micro">High</div><div class="mono" style="font-size:15px;margin-top:3px">${nav(Math.max(...p.history.map(x=>x.v)))}</div></div>
-          <div><div class="micro">Opened</div><div class="mono" style="font-size:15px;margin-top:3px">${dstr(p.opened)}</div></div>
-        </div>
+  <div class="cols cols-2-1" style="align-items:stretch">
+    <div class="card" style="display:flex;flex-direction:column;justify-content:space-between;height:100%">
+      <div class="card-head"><h3>${ic('activity','icon-sm')} Token value · last 6 months</h3>
+        <span class="badge b-gray">${pct(inceptionOf(p))} since opening</span></div>
+      <div style="padding:20px 18px 8px;flex:1;display:flex;flex-direction:column;justify-content:center">${chart(p.history, {h:300})}</div>
+      <div class="between" style="padding:14px 22px 18px;border-top:1px solid var(--line-soft);flex-wrap:wrap;gap:14px;margin-top:auto">
+        <div><div class="micro">Opening value</div><div class="mono" style="font-size:15px;margin-top:3px">${nav(p.inception)}</div></div>
+        <div><div class="micro">Low</div><div class="mono" style="font-size:15px;margin-top:3px">${nav(Math.min(...p.history.map(x=>x.v)))}</div></div>
+        <div><div class="micro">High</div><div class="mono" style="font-size:15px;margin-top:3px">${nav(Math.max(...p.history.map(x=>x.v)))}</div></div>
+        <div><div class="micro">Opened</div><div class="mono" style="font-size:15px;margin-top:3px">${dstr(p.opened)}</div></div>
       </div>
-
-      <div class="card">
-        <div class="card-head"><h3>${ic('activity','icon-sm')} Your token movements</h3></div>
-        <div class="table-scroll"><table>
-          <thead><tr><th>Event</th><th>Date</th><th class="t-right">Tokens</th><th class="t-right">Value per token</th>
-            <th class="t-right">USDC</th><th>Transaction</th></tr></thead>
-          <tbody>${ledgerRows}</tbody></table></div>
-      </div>
-
-      ${facilitiesCard(p)}
     </div>
 
-    <div class="stack" style="gap:20px">
-      <div class="card">
-        <div class="card-head"><h3>${ic('wallet','icon-sm')} Your position</h3></div>
-        <div class="card-pad stack" style="gap:2px">
-          <div class="kv"><span class="k">Tokens held</span><span class="v mono">${nf(held,2)} ${p.symbol}</span></div>
-          <div class="kv"><span class="k">Locked in redemption</span><span class="v mono">${nf(locked,2)} ${p.symbol}</span></div>
-          <div class="kv"><span class="k">Value per token</span><span class="v mono">${nav(navOf(p))}</span></div>
-          <div class="kv"><span class="k">Cost</span><span class="v mono">${nf(cost,2)} USDC</span></div>
-          <div class="kv kv-total"><span class="k" style="color:var(--ink);font-weight:500">Current value</span>
-            <span class="v mono" style="font-size:15px">${nf(value,2)} USDC</span></div>
-          <div class="kv"><span class="k">Gain</span><span class="v mono ${gain>=0?'pos':'neg'}">${(gain>=0?'+':'')+nf(gain,2)} USDC</span></div>
-          <div class="callout c-neutral" style="margin-top:12px">${ic('lock','icon-sm')}<div>
-            Tokens are delivered to <b>${tokenWallet().label}</b> — the only address that can hold them. It is pre-configured and cannot be edited.</div></div>
-        </div>
+    <div class="card" style="display:flex;flex-direction:column;height:100%">
+      <div class="card-head"><h3>${ic('wallet','icon-sm')} Your position</h3></div>
+      <div class="card-pad stack" style="gap:2px">
+        <div class="kv"><span class="k">Tokens held</span><span class="v mono">${nf(held,2)} ${p.symbol}</span></div>
+        <div class="kv"><span class="k">Locked in redemption</span><span class="v mono">${nf(locked,2)} ${p.symbol}</span></div>
+        <div class="kv"><span class="k">Tokens awaiting minting</span><span class="v mono" ${tokensAwaiting > 0 ? 'style="color:var(--ink);font-weight:600"' : ''}>${nf(tokensAwaiting,2)} ${p.symbol}</span></div>
+        <div class="kv"><span class="k">Funds allocated to minting</span><span class="v mono" ${fundsAllocated > 0 ? 'style="color:var(--ink);font-weight:600"' : ''}>${nf(fundsAllocated,2)} USDC</span></div>
+        <div class="kv"><span class="k">Value per token</span><span class="v mono">${nav(navOf(p))}</span></div>
+        <div class="kv"><span class="k">Cost</span><span class="v mono">${nf(cost,2)} USDC</span></div>
+        <div class="kv kv-total"><span class="k" style="color:var(--ink);font-weight:500">Current value</span>
+          <span class="v mono" style="font-size:15px">${nf(value,2)} USDC</span></div>
+        <div class="kv"><span class="k">Gain</span><span class="v mono ${gain>=0?'pos':'neg'}">${(gain>=0?'+':'')+nf(gain,2)} USDC</span></div>
+        ${tokensAwaiting > 0 ? `
+          <div class="callout c-amber" style="margin-top:12px">
+            ${ic('hourglass','icon-sm')}
+            <div style="font-size:12px;line-height:1.45">
+              <b>${nf(tokensAwaiting,2)} ${p.symbol} in minting pipeline:</b> ${nf(fundsAllocated,2)} USDC allocated across ${pendingMints.length} pending mint request${pendingMints.length>1?'s':''}.
+            </div>
+          </div>
+        ` : ''}
+        <div class="callout c-neutral" style="margin-top:12px">${ic('lock','icon-sm')}<div>
+          Tokens are delivered to <b>${tokenWallet().label}</b> — the only address that can hold them. It is pre-configured and cannot be edited.</div></div>
       </div>
+    </div>
+  </div>
 
-      <div class="card">
-        <div class="card-head"><h3>${ic('hourglass','icon-sm')} Your requests here</h3></div>
-        <div class="table-scroll"><table>
-          <thead><tr><th>Request</th><th>Platform</th><th class="t-right">Tokens</th><th class="t-right">Value</th><th>Submitted</th><th>Status</th><th></th></tr></thead>
-          <tbody>${requestRows(mine, {cols:7, empty:'None yet.'})}</tbody></table></div>
+  <div class="stack" style="gap:20px;margin-top:24px">
+    <div class="card">
+      <div class="card-head">
+        <h3>${ic('hourglass','icon-sm')} Your requests here</h3>
+        <span class="badge b-gray">${allRequests.length} request${allRequests.length===1?'':'s'}</span>
       </div>
+      <div class="table-scroll"><table>
+        <thead><tr><th>Request</th><th>Platform</th><th class="t-right">Tokens</th><th class="t-right">Value</th><th>Submitted</th><th>Status</th><th class="t-right">Action</th></tr></thead>
+        <tbody>${requestRows(allRequests, {cols:7, empty:'No requests yet.'})}</tbody></table></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3>${ic('activity','icon-sm')} Your token movements</h3></div>
+      <div class="table-scroll"><table>
+        <thead><tr><th>Event</th><th>Date</th><th class="t-right">Tokens</th><th class="t-right">Value per token</th>
+          <th class="t-right">USDC</th><th>Transaction</th></tr></thead>
+        <tbody>${ledgerRows}</tbody></table></div>
     </div>
   </div>`;
 }
@@ -916,8 +939,6 @@ export function viewDashSupply(){
         <div><div class="micro">Since opening</div><div class="mono pos" style="font-size:15px;margin-top:3px">${pct(inceptionOf(p))}</div></div>
       </div>
     </div>
-
-    ${facilitiesCard(p)}
 
     ${viewOriginatorNoteRequests(S, CTX)}
   </div>`;
@@ -1133,7 +1154,8 @@ export function mintGo(){
 
   const steps = [
     { label:'Authorizing capital allocation from wallet', meta:w.label, ms:900 },
-    { label:'Submitting formal capital mint request to KBridge Protocol', meta:'Request ID: '+reqId, ms:1000 }
+    { label:'Submitting formal capital mint request to KBridge Protocol', meta:'Request ID: '+reqId, ms:900 },
+    { label:'Automatically notifying originating partner to submit contracts', meta:p.name, ms:800 }
   ];
 
   openModal(modalShell('Submitting Capital Request', nf(amt,2)+' USDC → '+nf(tokens,2)+' '+p.symbol, 'coins', '<div class="steps"></div>', ''));
@@ -1151,30 +1173,30 @@ export function mintGo(){
       tokenCustody: tw.address,
       destWallet: dest ? dest.address : '0x5d71ac09e4b83f26d1c7590ae4bb3f8021d64c7a',
       destWalletLabel: dest ? dest.label : 'Originating Party Funding Wallet',
-      status: 'Pending Admin Review',
+      status: 'Awaiting Originating Partner',
       created: new Date(TODAY),
-      notesRequestedAt: null,
-      noteType: '',
-      instructions: '',
+      notesRequestedAt: new Date(TODAY),
+      noteType: 'Senior Secured Promissory Note & Invoice Purchase Agreement',
+      instructions: `Originating partner automatically notified to provide signed backing contract notes for ${nf(amt, 2)} USDC allocation.`,
       documents: [],
       mintedAt: null,
       tx: null
     };
     if (!S.mintRequests) S.mintRequests = [];
     S.mintRequests.unshift(newReq);
-    S.feed.unshift({ ic:'coins', tone:'neutral', text:'Capital Partner filed capital request '+reqId+' for '+nf(tokens,2)+' '+p.symbol+'.', at:new Date(TODAY) });
+    S.feed.unshift({ ic:'coins', tone:'neutral', text:'Capital Partner filed capital request '+reqId+' for '+nf(tokens,2)+' '+p.symbol+'. Originating partner auto-notified.', at:new Date(TODAY) });
 
     const body = `
       <div style="text-align:center;padding:8px 0 12px">
         <div class="tick">${ic('check','icon-lg')}</div>
         <h3 style="font-size:17px;font-weight:600;margin-top:14px">Capital Request Submitted</h3>
         <p class="muted" style="font-size:13.5px;max-width:440px;margin:6px auto 0">
-          Request <b class="mono" style="color:var(--ink)">${reqId}</b> has been received by KBridge administrators. You will be notified once the status updates.
+          Request <b class="mono" style="color:var(--ink)">${reqId}</b> active. <b style="color:var(--ink)">${p.name}</b> (Originating Partner) has been automatically notified to produce and submit backing contract documents.
         </p>
       </div>
 
       <div style="margin-bottom:16px">
-        ${pipelineStepper('Pending Admin Review')}
+        ${pipelineStepper('Awaiting Originating Partner')}
       </div>
 
       <div class="panel">
@@ -1182,13 +1204,13 @@ export function mintGo(){
         <div class="kv"><span class="k">Capital Amount</span><span class="v mono">${nf(amt,2)} USDC</span></div>
         <div class="kv"><span class="k">Tokens to Mint</span><span class="v mono">${nf(tokens,2)} ${p.symbol}</span></div>
         <div class="kv"><span class="k">Source Wallet</span><span class="v">${esc(w.label)}</span></div>
-        <div class="kv"><span class="k">Pipeline Status</span><span class="v">${mintStatusBadge('Pending Admin Review')}</span></div>
+        <div class="kv"><span class="k">Pipeline Status</span><span class="v">${mintStatusBadge('Awaiting Originating Partner')}</span></div>
       </div>
 
       <div class="callout c-neutral">
         ${ic('info','icon-sm')}
         <div style="font-size:12.5px;line-height:1.5">
-          <b>Next steps:</b> KBridge admins will file a note request with the Originating Party to produce compliant Promissory Notes. Once approved, Hedera smart contracts will execute token minting and fund transfer.
+          <b>Next steps:</b> The Originating Partner will upload signed legal promissory notes. Once submitted, KBridge Admin will inspect &amp; review the documents and execute token minting.
         </div>
       </div>
     `;
@@ -1198,7 +1220,7 @@ export function mintGo(){
     `;
 
     openModal(modalShell('Capital Request Active', reqId, 'coins', body, foot));
-    toast.success('Capital request submitted', reqId + ' sent to KBridge admins', 'coins');
+    toast.success('Capital request submitted', reqId + ' — Originating Partner notified', 'coins');
     render();
   });
 }

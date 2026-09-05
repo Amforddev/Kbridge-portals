@@ -77,11 +77,11 @@ export const INITIAL_MINT_REQUESTS = [
     tokenCustody: '0xa10b73ce55f2419d8ab6c0e73f81d2495ba7c318',
     destWallet: '0x5d71ac09e4b83f26d1c7590ae4bb3f8021d64c7a',
     destWalletLabel: 'Originator Partner Funding Wallet',
-    status: 'Notes Requested',
+    status: 'Awaiting Originating Partner',
     created: new Date(TODAY.getTime() - 5 * 3600000),
-    notesRequestedAt: new Date(TODAY.getTime() - 2 * 3600000),
+    notesRequestedAt: new Date(TODAY.getTime() - 5 * 3600000),
     noteType: 'Senior Secured Promissory Note & Invoice Purchase Agreement',
-    instructions: 'Provide signed contract notes backing Acme Nuts & Bolts (INV-2026-8921) facility for 100,000.00 USDC allocation.',
+    instructions: 'Originating partner automatically notified to provide signed contract notes backing Acme Nuts & Bolts (INV-2026-8921) facility for 100,000.00 USDC allocation.',
     documents: [],
     mintedAt: null,
     tx: null
@@ -89,16 +89,13 @@ export const INITIAL_MINT_REQUESTS = [
 ];
 
 export function mintStatusBadge(status) {
-  if (status === 'Pending Admin Review') {
-    return `<span class="badge b-amber"><span class="dot"></span>Awaiting KBridge</span>`;
-  }
-  if (status === 'Notes Requested') {
-    return `<span class="badge b-amber"><span class="dot"></span>Notes Requested</span>`;
+  if (status === 'Awaiting Originating Partner' || status === 'Notes Requested' || status === 'Pending Admin Review') {
+    return `<span class="badge b-amber"><span class="dot"></span>Awaiting Originating Partner</span>`;
   }
   if (status === 'Documents Uploaded') {
-    return `<span class="badge b-ink"><span class="dot"></span>Documents Ready</span>`;
+    return `<span class="badge b-green"><span class="dot"></span>Verified &amp; Ready</span>`;
   }
-  if (status === 'Completed') {
+  if (status === 'Completed' || status === 'Settled') {
     return `<span class="badge b-green"><span class="dot"></span>Minted &amp; Settled</span>`;
   }
   return `<span class="badge b-gray">${status}</span>`;
@@ -107,14 +104,14 @@ export function mintStatusBadge(status) {
 export function pipelineStepper(status) {
   const steps = [
     { n: '1', title: 'Capital Request', sub: 'Capital Partner' },
-    { n: '2', title: 'Request Notes', sub: 'KBridge Admin' },
-    { n: '3', title: 'Upload Contracts', sub: 'Originating Party' },
-    { n: '4', title: 'Mint & Transfer', sub: 'Hedera Execution' }
+    { n: '2', title: 'Submit Documents', sub: 'Originating Partner' },
+    { n: '3', title: 'Inspect & Review', sub: 'KBridge Admin' },
+    { n: '4', title: 'Mint & Settle', sub: 'Hedera Execution' }
   ];
   let cur = 1;
-  if (status === 'Notes Requested') cur = 2;
+  if (status === 'Awaiting Originating Partner' || status === 'Notes Requested' || status === 'Pending Admin Review') cur = 2;
   if (status === 'Documents Uploaded') cur = 3;
-  if (status === 'Completed') cur = 4;
+  if (status === 'Completed' || status === 'Settled') cur = 4;
 
   return `<div class="pipe-steps">
     ${steps.map((s, i) => {
@@ -135,35 +132,40 @@ export function pipelineStepper(status) {
    ============================================================ */
 export function viewAdminDashboard(S, ctx) {
   const all = S.mintRequests;
-  const pAdmin = all.filter(r => r.status === 'Pending Admin Review');
-  const pNotes = all.filter(r => r.status === 'Notes Requested');
+  const pAwaitingOriginator = all.filter(r => r.status === 'Awaiting Originating Partner' || r.status === 'Notes Requested' || r.status === 'Pending Admin Review');
   const pMint = all.filter(r => r.status === 'Documents Uploaded');
-  const pDone = all.filter(r => r.status === 'Completed');
+  const pDone = all.filter(r => r.status === 'Completed' || r.status === 'Settled');
 
   const totalCap = all.reduce((a, r) => a + r.amt, 0);
   const totalSettled = pDone.reduce((a, r) => a + r.amt, 0);
 
-  const pendingAlert = (pAdmin.length || pMint.length) ? `
-    <div class="callout c-amber" style="margin-bottom:22px;align-items:center;justify-content:space-between">
+  const pendingAlert = pMint.length ? `
+    <div class="callout c-green" style="margin-bottom:22px;align-items:center;justify-content:space-between">
       <div class="row gap8">
         ${ic('shield', 'icon-sm')}
         <div>
-          <b>Admin Actions Required:</b> 
-          ${pAdmin.length ? `${pAdmin.length} request(s) awaiting note request to Originator. ` : ''}
-          ${pMint.length ? `${pMint.length} request(s) ready for document inspection and token minting.` : ''}
+          <b>Action Ready:</b> 
+          ${pMint.length} request(s) submitted with documents, ready for Admin inspection &amp; token minting.
         </div>
       </div>
-    </div>` : '';
+    </div>` : (pAwaitingOriginator.length ? `
+    <div class="callout c-neutral" style="margin-bottom:22px;align-items:center;justify-content:space-between">
+      <div class="row gap8">
+        ${ic('hourglass', 'icon-sm')}
+        <div>
+          <b>Originator Pipeline Active:</b> 
+          ${pAwaitingOriginator.length} request(s) automatically notified; awaiting document upload from Originating Partner.
+        </div>
+      </div>
+    </div>` : '');
 
   const tableRows = all.map(r => {
     const p = ctx.PL(r.pf);
     let actionBtn = '';
-    if (r.status === 'Pending Admin Review') {
-      actionBtn = `<button class="btn btn-primary btn-sm" data-act="admin-req-notes" data-id="${r.id}">${ic('send', 'icon-sm')} Request Notes</button>`;
-    } else if (r.status === 'Notes Requested') {
-      actionBtn = `<button class="btn btn-ghost btn-sm" data-act="req-details" data-id="${r.id}"><span class="faint">Waiting on Notes</span></button>`;
-    } else if (r.status === 'Documents Uploaded') {
+    if (r.status === 'Documents Uploaded') {
       actionBtn = `<button class="btn btn-primary btn-sm" data-act="admin-inspect-mint" data-id="${r.id}">${ic('shield', 'icon-sm')} Inspect &amp; Mint</button>`;
+    } else if (r.status === 'Awaiting Originating Partner' || r.status === 'Notes Requested' || r.status === 'Pending Admin Review') {
+      actionBtn = `<button class="btn btn-ghost btn-sm" data-act="req-details" data-id="${r.id}"><span class="faint">Awaiting Originator</span></button>`;
     } else {
       actionBtn = `<button class="btn btn-ghost btn-sm" data-act="req-details" data-id="${r.id}">${ic('fileCheck', 'icon-sm')} View Receipt</button>`;
     }
@@ -213,12 +215,12 @@ export function viewAdminDashboard(S, ctx) {
         <div class="sub">${all.length} total capital requests</div>
       </div>
       <div class="card card-pad stat">
-        <div class="label">${ic('hourglass', 'icon-sm')} In Note Production</div>
-        <div class="value mono">${pAdmin.length + pNotes.length}</div>
-        <div class="sub">${pAdmin.length} review · ${pNotes.length} awaiting notes</div>
+        <div class="label">${ic('hourglass', 'icon-sm')} Awaiting Originator</div>
+        <div class="value mono">${pAwaitingOriginator.length}</div>
+        <div class="sub">Auto-notified for documents</div>
       </div>
       <div class="card card-pad stat">
-        <div class="label">${ic('fileCheck', 'icon-sm')} Ready to Mint</div>
+        <div class="label">${ic('fileCheck', 'icon-sm')} Verified &amp; Ready</div>
         <div class="value mono pos">${pMint.length}</div>
         <div class="sub">${nf(pMint.reduce((a,r)=>a+r.amt,0),0)} USDC waiting to execute</div>
       </div>
@@ -309,15 +311,15 @@ export function viewCapitalPartnerRequests(S, ctx) {
    ============================================================ */
 export function viewOriginatorNoteRequests(S, ctx) {
   const forOriginator = S.mintRequests.filter(r => r.pf === 'pursuit');
-  const pendingNotes = forOriginator.filter(r => r.status === 'Notes Requested');
+  const pendingNotes = forOriginator.filter(r => r.status === 'Awaiting Originating Partner' || r.status === 'Notes Requested' || r.status === 'Pending Admin Review');
   
   const alert = pendingNotes.length ? `
     <div class="callout c-amber" style="margin-bottom:20px;align-items:center;justify-content:space-between">
       <div class="row gap8">
         ${ic('fileText', 'icon-sm')}
         <div>
-          <b>${pendingNotes.length} Note &amp; Contract Request(s) Awaiting Upload:</b>
-          KBridge has filed formal requests for signed contract notes to support incoming capital allocations.
+          <b>${pendingNotes.length} Capital Request(s) Awaiting Backing Documents:</b>
+          Capital Partner allocations have been filed and automatically routed to you. Please upload signed promissory notes &amp; invoice contracts for Admin inspection.
         </div>
       </div>
     </div>` : '';
@@ -325,14 +327,14 @@ export function viewOriginatorNoteRequests(S, ctx) {
   const rows = forOriginator.map(r => {
     const p = ctx.PL(r.pf);
     let actionBtn = '';
-    if (r.status === 'Notes Requested') {
-      actionBtn = `<button class="btn btn-primary btn-sm" data-act="originator-upload-notes" data-id="${r.id}">${ic('upload', 'icon-sm')} Upload Notes &amp; Contracts</button>`;
+    if (r.status === 'Awaiting Originating Partner' || r.status === 'Notes Requested' || r.status === 'Pending Admin Review') {
+      actionBtn = `<button class="btn btn-primary btn-sm" data-act="originator-upload-notes" data-id="${r.id}">${ic('upload', 'icon-sm')} Submit Documents</button>`;
     } else if (r.status === 'Documents Uploaded') {
-      actionBtn = `<span class="badge b-ink">Under KBridge Review</span>`;
-    } else if (r.status === 'Completed') {
+      actionBtn = `<span class="badge b-ink">Submitted · Ready for Review</span>`;
+    } else if (r.status === 'Completed' || r.status === 'Settled') {
       actionBtn = `<span class="badge b-green">Minted &amp; Settled</span>`;
     } else {
-      actionBtn = `<span class="faint" style="font-size:12px">Pending KBridge</span>`;
+      actionBtn = `<span class="faint" style="font-size:12px">Pending</span>`;
     }
 
     return `<tr class="hover-row">

@@ -8,20 +8,20 @@ export function renderDocChip(doc, opts = {}) {
   return `
     <div class="doc-chip" style="${opts.style || ''}">
       <div class="d-info">
-        <div style="width:34px;height:34px;border-radius:6px;background:#F8FAFC;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;flex:none;color:var(--ink)">
+        <div style="width:34px;height:34px;border-radius:6px;background:#F8FAFC;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--ink)">
           ${ic('fileText', 'icon-sm')}
         </div>
-        <div style="min-width:0">
+        <div style="min-width:0;flex:1">
           <div class="d-name" title="${esc(doc.name)}">${esc(doc.name)}</div>
           <div class="d-size">${esc(doc.size || '1.8 MB')} · ${doc.signer ? 'Signed by ' + esc(doc.signer) : 'SHA-256: ' + short(doc.hash || '0x000...')}</div>
         </div>
       </div>
-      <div class="row gap6" style="align-items:center;flex:none">
+      <div class="d-actions row gap6" style="align-items:center;flex-shrink:0">
         <button class="doc-eye-btn" data-act="preview-doc" data-doc="${docStr}" title="Preview file metadata and status" aria-label="Preview Document">
           ${ic('eye', 'icon-xs')} <span>Preview</span>
         </button>
         ${opts.showDownload ? `<button class="btn btn-ghost btn-xs" data-act="download-doc" data-name="${esc(doc.name)}" title="Download Document">${ic('download', 'icon-xs')}</button>` : ''}
-        ${opts.badge ? `<span class="badge ${opts.badgeClass || 'b-green'}">${opts.badge}</span>` : ''}
+        ${opts.badge ? `<span class="badge ${opts.badgeClass || 'b-green'}" style="white-space:nowrap;flex-shrink:0">${opts.badge}</span>` : ''}
       </div>
     </div>
   `;
@@ -33,21 +33,25 @@ export function openDocumentPreviewModal(doc, S, ctx) {
   const uploadDate = doc.uploadedAt ? (doc.uploadedAt instanceof Date ? doc.uploadedAt : new Date(doc.uploadedAt)) : new Date(TODAY);
 
   const body = `
-    <div style="margin-bottom:16px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:var(--r);padding:14px 16px">
-      <div class="between" style="align-items:flex-start;margin-bottom:10px">
-        <div class="row gap12" style="align-items:center">
-          <div style="width:42px;height:42px;border-radius:8px;background:#fff;border:1px solid var(--line);box-shadow:var(--shadow-xs);display:flex;align-items:center;justify-content:center;color:#0F172A">
+    <div style="margin-bottom:16px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:var(--r-lg);padding:16px;box-sizing:border-box">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+        <div style="display:flex;align-items:flex-start;gap:12px;min-width:0;flex:1 1 240px">
+          <div style="width:40px;height:40px;border-radius:8px;background:#fff;border:1px solid var(--line);box-shadow:var(--shadow-xs);display:flex;align-items:center;justify-content:center;color:#0F172A;flex-shrink:0;margin-top:2px">
             ${ic('fileText', 'icon-md')}
           </div>
-          <div>
-            <div style="font-size:15px;font-weight:600;color:var(--ink)">${esc(doc.name)}</div>
-            <div class="faint" style="font-size:12px">${doc.docType || 'Legal Agreement & Note Document'} · ${doc.size || '1.8 MB'}</div>
+          <div style="min-width:0;flex:1">
+            <div style="font-size:14px;font-weight:600;color:var(--ink);word-break:break-word;line-height:1.35">${esc(doc.name)}</div>
+            <div class="faint" style="font-size:12px;margin-top:2px">${doc.docType || 'Legal Agreement & Note Document'} · ${doc.size || '1.8 MB'}</div>
           </div>
         </div>
-        <span class="badge b-green">${ic('check', 'icon-xs')} ${doc.status || 'Verified & Ready'}</span>
+        <div style="flex-shrink:0;align-self:flex-start">
+          <span class="badge b-green" style="white-space:nowrap;font-size:11.5px;padding:3px 9px">
+            ${ic('check', 'icon-xs')} ${doc.status || 'Verified & Ready'}
+          </span>
+        </div>
       </div>
 
-      <div class="grid grid-2 gap8 faint" style="font-size:12px;border-top:1px solid #E2E8F0;padding-top:10px">
+      <div class="grid grid-2 gap8 faint" style="font-size:12px;border-top:1px solid #E2E8F0;padding-top:12px">
         <div>• Checksum: <b class="mono" style="color:var(--ok)">SHA-256 Validated</b></div>
         <div>• Security: <b style="color:var(--ink)">AES-256-GCM Encrypted</b></div>
         <div>• Ledger State: <b style="color:var(--ink)">Hedera File Service (HFS)</b></div>
@@ -220,10 +224,10 @@ export function openUploadNotesModal(reqId, S, ctx) {
       </div>
     </div>
 
-    <div class="callout c-amber" style="margin-bottom:16px">
+    <div class="callout c-neutral" style="margin-bottom:16px">
       ${ic('info', 'icon-sm')}
       <div>
-        <b>KBridge Request:</b> ${esc(r.instructions || 'Upload the signed promissory notes and contract documents.')}
+        <b>Automatic Capital Notification:</b> Capital Partner has allocated ${nf(r.amt, 2)} USDC. Please upload the signed contract notes backing this facility. Upon submission, KBridge Admin will inspect and review before executing Hedera token minting.
       </div>
     </div>
 
@@ -264,7 +268,7 @@ export function openUploadNotesModal(reqId, S, ctx) {
     </button>
   `;
 
-  ctx.openModal(ctx.modalShell('Upload Contract Notes', 'Step 3: Provide compliant legal notes for KBridge verification', 'upload', body, foot));
+  ctx.openModal(ctx.modalShell('Submit Backing Contract Notes', 'Step 2: Provide compliant legal notes for KBridge Admin inspection', 'upload', body, foot));
 
   const dz = document.getElementById('contractDropzone');
   const fp = document.getElementById('filePicker');
@@ -328,18 +332,18 @@ export function openInspectAndMintModal(reqId, S, ctx) {
     </div>
 
     <div class="card card-pad" style="background:#F8FAFC;border:1px solid #E2E8F0;margin-bottom:16px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <div style="font-weight:600;font-size:13.5px;color:#0F172A">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;flex-wrap:wrap">
+        <div style="font-weight:600;font-size:13.5px;color:#0F172A;display:flex;align-items:center;gap:6px">
           ${ic('shield', 'icon-sm')} Document Verification &amp; Compliance Audit
         </div>
-        <span class="badge b-green">${ic('check', 'icon-xs')} Verified</span>
+        <span class="badge b-green" style="white-space:nowrap;flex-shrink:0">${ic('check', 'icon-xs')} Verified &amp; Ready</span>
       </div>
 
-      <div style="margin-bottom:10px">
-        ${renderDocChip(doc, { badge: `${ic('check', 'icon-xs')} Verified`, badgeClass: 'b-green' })}
+      <div style="margin-bottom:12px">
+        ${renderDocChip(doc, { badge: `${ic('check', 'icon-xs')} Verified &amp; Ready`, badgeClass: 'b-green' })}
       </div>
 
-      <div class="grid grid-2 gap8 faint" style="font-size:12px">
+      <div class="grid grid-2 gap8 faint" style="font-size:12px;border-top:1px solid #E2E8F0;padding-top:10px">
         <div>• Backing Facility: <b style="color:var(--ink)">${doc.facilityId || 'INV-2026-9004'}</b></div>
         <div>• Jurisdiction: <b style="color:var(--ink)">Delaware SPV</b></div>
         <div>• Recourse: <b style="color:var(--ink)">Full Recourse Senior Note</b></div>
@@ -384,7 +388,7 @@ export function openInspectAndMintModal(reqId, S, ctx) {
     </button>
   `;
 
-  ctx.openModal(ctx.modalShell('Inspect Documents &amp; Mint', 'Step 4: Atomic Hedera token mint and fund disbursement', 'shield', body, foot));
+  ctx.openModal(ctx.modalShell('Inspect Documents &amp; Mint', 'Step 3: Document inspection, compliance review &amp; Hedera minting', 'shield', body, foot));
 
   const btn = document.getElementById('btnExecuteHederaMint');
   if (btn) {
@@ -500,7 +504,7 @@ export function openRequestDetailsModal(reqId, S, ctx) {
     ` : `
       <div class="callout c-neutral" style="margin-top:16px">
         ${ic('clock', 'icon-sm')}
-        <div>Notes not yet uploaded by the Originating Party.</div>
+        <div>Originating partner automatically notified; awaiting contract document submission.</div>
       </div>
     `}
   `;
