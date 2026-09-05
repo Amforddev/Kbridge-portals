@@ -88,7 +88,7 @@ export const INITIAL_MINT_REQUESTS = [
   }
 ];
 
-export function mintStatusBadge(status) {
+export function mintStatusBadge(status, org) {
   if (status === 'Awaiting Originating Partner' || status === 'Notes Requested' || status === 'Pending Admin Review') {
     return `<span class="badge b-amber"><span class="dot"></span>Awaiting Originating Partner</span>`;
   }
@@ -96,7 +96,8 @@ export function mintStatusBadge(status) {
     return `<span class="badge b-green"><span class="dot"></span>Verified &amp; Ready</span>`;
   }
   if (status === 'Completed' || status === 'Settled') {
-    return `<span class="badge b-green"><span class="dot"></span>Minted &amp; Settled</span>`;
+    const label = org === 'pursuit' ? 'Provided &amp; Settled' : (org === 'theoriq' ? 'Approved &amp; Minted' : 'Minted &amp; Settled');
+    return `<span class="badge b-green"><span class="dot"></span>${label}</span>`;
   }
   return `<span class="badge b-gray">${status}</span>`;
 }
@@ -183,7 +184,7 @@ export function viewAdminDashboard(S, ctx) {
       <td class="mono t-right" style="font-weight:600">${nf(r.amt, 2)} USDC</td>
       <td class="mono t-right">${nf(r.tokens, 2)}</td>
       <td class="mono">${dshort(r.created)}<div class="faint" style="font-size:11px">${ago(r.created)}</div></td>
-      <td>${mintStatusBadge(r.status)}</td>
+      <td>${mintStatusBadge(r.status, S.org)}</td>
       <td class="t-right">${actionBtn}</td>
     </tr>`;
   }).join('');
@@ -198,11 +199,6 @@ export function viewAdminDashboard(S, ctx) {
           <div style="font-weight:600;font-size:15px;letter-spacing:-.01em">KBridge Admin Console</div>
           <div style="font-size:12px;color:#94A3B8">End-to-end token minting, note coordination &amp; Hedera settlement orchestration</div>
         </div>
-      </div>
-      <div class="row gap8">
-        <span style="font-size:12px;color:#94A3B8">Switch test role:</span>
-        <button class="btn btn-ghost btn-sm" data-act="switch-role" data-org="theoriq" style="background:#1E293B;color:#fff;border-color:#334155">Capital Partner</button>
-        <button class="btn btn-ghost btn-sm" data-act="switch-role" data-org="pursuit" style="background:#1E293B;color:#fff;border-color:#334155">Originating Party</button>
       </div>
     </div>
 
@@ -273,7 +269,7 @@ export function viewCapitalPartnerRequests(S, ctx) {
       <td class="mono t-right" style="font-weight:600">${nf(r.amt, 2)} USDC</td>
       <td class="mono t-right">${nf(r.tokens, 2)} ${p ? p.symbol : 'PUR'}</td>
       <td class="mono">${dshort(r.created)}<div class="faint" style="font-size:11px">${ago(r.created)}</div></td>
-      <td>${mintStatusBadge(r.status)}</td>
+      <td>${mintStatusBadge(r.status, S.org)}</td>
       <td class="t-right">
         <button class="btn btn-ghost btn-sm" data-act="req-details" data-id="${r.id}">${ic('file', 'icon-sm')} View Status</button>
       </td>
@@ -343,7 +339,7 @@ export function viewOriginatorNoteRequests(S, ctx) {
       <td class="mono t-right" style="font-weight:600">${nf(r.amt, 2)} USDC</td>
       <td class="mono t-right">${nf(r.tokens, 2)} ${p ? p.symbol : 'PUR'}</td>
       <td class="mono">${dshort(r.created)}<div class="faint" style="font-size:11px">${ago(r.created)}</div></td>
-      <td>${mintStatusBadge(r.status)}</td>
+      <td>${mintStatusBadge(r.status, S.org)}</td>
       <td class="t-right">${actionBtn}</td>
     </tr>`;
   }).join('');

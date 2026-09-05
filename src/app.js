@@ -444,15 +444,24 @@ export function header(){
   const tabs = () => navItems().map(([k,l]) =>
     `<button class="${(S.view===k || (k==='platforms' && S.view==='platform'))?'on':''}" data-act="view" data-view="${k}">${l}</button>`).join('');
 
-  const adminPendingCount = (S.mintRequests || []).filter(r => r.status === 'Documents Uploaded').length;
+  const roleSwitcher = `
+    <div class="row gap4" style="margin-left:16px;background:rgba(15,23,42,0.05);padding:2px;border-radius:99px;border:1px solid rgba(15,23,42,0.06);display:inline-flex;align-items:center">
+      <span class="muted hide-sm" style="font-size:10px;font-weight:600;padding:0 6px 0 8px;text-transform:uppercase;letter-spacing:0.02em;color:var(--muted)">As:</span>
+      <button class="btn btn-quiet btn-xs" data-act="switch-role" data-org="theoriq" style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:99px;height:22px;border:none;box-shadow:none;background:${S.org==='theoriq'?'var(--ink)':'transparent'};color:${S.org==='theoriq'?'#fff':'var(--muted)'}">Capital</button>
+      <button class="btn btn-quiet btn-xs" data-act="switch-role" data-org="pursuit" style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:99px;height:22px;border:none;box-shadow:none;background:${S.org==='pursuit'?'var(--ink)':'transparent'};color:${S.org==='pursuit'?'#fff':'var(--muted)'}">Originator</button>
+      <button class="btn btn-quiet btn-xs" data-act="switch-role" data-org="kbridge" style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:99px;height:22px;border:none;box-shadow:none;background:${S.org==='kbridge'?'var(--ink)':'transparent'};color:${S.org==='kbridge'?'#fff':'var(--muted)'}">Admin</button>
+    </div>
+  `;
 
   return `<header class="app"><div class="wrap">
     <div class="hbar">
-      <div class="row">
+      <div class="row" style="align-items:center">
         <div class="brandline" style="cursor:pointer" data-act="view" data-view="dash">
           ${kLogo(30)}<span class="name">kbridge</span>
         </div>
         <nav class="nav" style="margin-left:24px">${tabs()}</nav>
+        <span class="divider-v hide-sm" style="height:16px;margin-left:16px;border-left:1px solid var(--line)"></span>
+        ${roleSwitcher}
       </div>
       <div class="row gap12" style="align-items:center">
         <button class="bell" data-act="notif">${ic('bell')}<span class="pip"></span></button>
@@ -488,7 +497,8 @@ export function statusBadge(s){
   const map = { 'Open':'b-green', 'Opening soon':'b-amber', 'Closed':'b-gray',
                 'Active':'b-green', 'Funding':'b-amber', 'Matured':'b-gray',
                 'Pending':'b-amber', 'Settled':'b-green' };
-  return `<span class="badge ${map[s]||'b-gray'}"><span class="dot"></span>${s}</span>`;
+  const label = s === 'Settled' ? 'Completed &amp; Paid' : s;
+  return `<span class="badge ${map[s]||'b-gray'}"><span class="dot"></span>${label}</span>`;
 }
 
 /* ---------- shared cards ---------- */
@@ -549,7 +559,7 @@ export function requestRows(list, opts){
     };
     const docStr = encodeURIComponent(JSON.stringify(doc));
 
-    const statusBadgeHtml = isMint ? mintStatusBadge(r.status) : statusBadge(r.status);
+    const statusBadgeHtml = isMint ? mintStatusBadge(r.status, S.org) : statusBadge(r.status);
     const actionCell = isMint
       ? `<td class="t-right"><button class="btn btn-ghost btn-sm" data-act="req-details" data-id="${r.id}">${ic('file','icon-sm')} View Status</button></td>`
       : (opts.honour
